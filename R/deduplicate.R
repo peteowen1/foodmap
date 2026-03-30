@@ -72,7 +72,8 @@ deduplicate_restaurants <- function(restaurants) {
     # Fill NA values from other rows
     for (col in names(merged_row)) {
       if (col %in% c("source", "name_norm", "suburb_norm", "n_sources")) next
-      if (is.na(merged_row[[col]])) {
+      val <- merged_row[[col]]
+      if (length(val) == 0 || is.na(val)) {
         non_na <- subset[[col]][!is.na(subset[[col]])]
         if (length(non_na) > 0) merged_row[[col]] <- non_na[1]
       }
