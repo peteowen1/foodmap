@@ -10,7 +10,7 @@
 #'   automatically if static parsing finds no venues and chromote is available.
 #'
 #' @return A tibble with columns: name, suburb, address, cuisine, category,
-#'   description, price_range, latitude, longitude, url.
+#'   description, price_range, rating, rating_scale, latitude, longitude, url.
 #' @export
 scrape_broadsheet <- function(city = "sydney", use_chromote = FALSE) {
 
@@ -73,6 +73,7 @@ fetch_venues_api <- function(city) {
 
 
   cli::cli_alert_info("Fetching venues from Broadsheet API...")
+  n_parse_fail <- 0L
 
   repeat {
     resp <- tryCatch(
@@ -99,7 +100,11 @@ fetch_venues_api <- function(city) {
       error = function(e) NULL
     )
 
-    if (is.null(data) || length(data$venues) == 0) break
+    if (is.null(data)) {
+      n_parse_fail <- n_parse_fail + 1L
+      break
+    }
+    if (length(data$venues) == 0) break
 
     all_venues <- c(all_venues, data$venues)
 
@@ -117,6 +122,10 @@ fetch_venues_api <- function(city) {
     if (page >= total_pages) break
     page <- page + 1L
     Sys.sleep(RATE_LIMIT_SECS)
+  }
+
+  if (n_parse_fail > 0) {
+    cli::cli_warn("{n_parse_fail} API page{?s} failed to parse")
   }
 
   if (length(all_venues) > 0) {
@@ -271,8 +280,11 @@ scrape_with_chromote <- function(url, city) {
   on.exit(b$close(), add = TRUE)
 
   b$Page$navigate(url)
-  # Wait for page to load and render venues
-  Sys.sleep(5)
+  # Wait for page load event, falling back to fixed sleep
+  tryCatch(
+    b$Page$loadEventFired(timeout = 10),
+    error = function(e) Sys.sleep(5)
+  )
 
   # Scroll down to trigger lazy-loading of all venues
   cli::cli_alert_info("Scrolling to load all venues...")

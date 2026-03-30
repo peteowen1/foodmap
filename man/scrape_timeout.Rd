@@ -11,7 +11,7 @@ scrape_timeout(city = "sydney")
 }
 \value{
 A tibble with columns: name, suburb, address, cuisine, category,
-description, price_range, latitude, longitude, url.
+description, price_range, rating, rating_scale, latitude, longitude, url.
 }
 \description{
 Fetches the Time Out best restaurants list for a given city.

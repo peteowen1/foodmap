@@ -6,7 +6,7 @@
 #' @param city Character. One of "sydney", "melbourne". Default `"sydney"`.
 #'
 #' @return A tibble with columns: name, suburb, address, cuisine, category,
-#'   description, price_range, latitude, longitude, url.
+#'   description, price_range, rating, rating_scale, latitude, longitude, url.
 #' @export
 scrape_gourmet_traveller <- function(city = "sydney") {
   city <- validate_city_source(city, "gourmet_traveller")
@@ -37,6 +37,12 @@ scrape_gourmet_traveller <- function(city = "sydney") {
     gt_parse_item(item, city)
   }) |>
     dplyr::bind_rows()
+
+  n_parsed <- sum(!is.na(result$name))
+  n_failed <- nrow(result) - n_parsed
+  if (n_failed > 0) {
+    cli::cli_warn("{n_failed}/{nrow(result)} item{?s} failed to parse a venue name")
+  }
 
   cli::cli_alert_success("Found {nrow(result)} venue{?s}")
   result

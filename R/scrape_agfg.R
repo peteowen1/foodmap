@@ -12,7 +12,7 @@
 #'   needing Google Places API geocoding.
 #'
 #' @return A tibble with columns: name, suburb, address, cuisine, category,
-#'   description, price_range, latitude, longitude, url.
+#'   description, price_range, rating, rating_scale, latitude, longitude, url.
 #' @export
 scrape_agfg <- function(city = "sydney", fetch_coordinates = TRUE) {
   city <- validate_city_source(city, "agfg")

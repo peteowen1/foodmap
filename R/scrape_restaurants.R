@@ -11,7 +11,7 @@
 #'   Default `FALSE`.
 #'
 #' @return A tibble with columns: name, suburb, address, cuisine, category,
-#'   description, price_range, latitude, longitude, url.
+#'   description, price_range, rating, rating_scale, latitude, longitude, url.
 #' @export
 scrape_restaurants <- function(city = "sydney",
                                source = "broadsheet",

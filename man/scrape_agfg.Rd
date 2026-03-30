@@ -2,7 +2,7 @@
 % Please edit documentation in R/scrape_agfg.R
 \name{scrape_agfg}
 \alias{scrape_agfg}
-\title{Scrape AGFG (Australian Good Food Guide) restaurant listings}
+\title{Scrape AGFG (Australian Good Food Guide) award-winning restaurants}
 \usage{
 scrape_agfg(city = "sydney", fetch_coordinates = TRUE)
 }
@@ -11,15 +11,16 @@ scrape_agfg(city = "sydney", fetch_coordinates = TRUE)
 "perth", "hobart", "canberra", "darwin", "gold-coast". Default \code{"sydney"}.}
 
 \item{fetch_coordinates}{Logical. If \code{TRUE} (default), fetch each venue's
-detail page to extract lat/lng from JSON-LD. Slower but avoids needing
-Google Places API geocoding.}
+detail page to extract lat/lng and address from JSON-LD. Slower but avoids
+needing Google Places API geocoding.}
 }
 \value{
 A tibble with columns: name, suburb, address, cuisine, category,
-description, price_range, latitude, longitude, url.
+description, price_range, rating, rating_scale, latitude, longitude, url.
 }
 \description{
-Fetches restaurant listings from agfg.com.au for a given city.
-Uses static HTML + AJAX pagination, then optionally scrapes detail pages
-for coordinates via JSON-LD structured data.
+Fetches award-winning restaurant listings from agfg.com.au/awards for the
+state corresponding to a given city. Parses the initial HTML table, then
+paginates via AJAX. Optionally scrapes detail pages for coordinates and
+address via JSON-LD.
 }

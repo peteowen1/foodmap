@@ -2,7 +2,7 @@
 % Please edit documentation in R/scrape_good_food_guide.R
 \name{scrape_good_food_guide}
 \alias{scrape_good_food_guide}
-\title{Scrape SMH/Age Good Food Guide venue listings}
+\title{Scrape SMH/Age Good Food Guide reviews}
 \usage{
 scrape_good_food_guide(city = "sydney")
 }
@@ -11,15 +11,12 @@ scrape_good_food_guide(city = "sydney")
 }
 \value{
 A tibble with columns: name, suburb, address, cuisine, category,
-description, price_range, latitude, longitude, url.
+description, price_range, cost_range, rating, rating_scale, hats,
+review_date, phone, website, latitude, longitude, url.
 }
 \description{
-Fetches restaurant listings from the Good Food section of smh.com.au
-(Sydney) or theage.com.au (Melbourne). Scrapes the eating-out section
-listing page and individual venue pages for metadata.
-}
-\details{
-Note: full restaurant lists (Critics' Picks, hat lists) are behind a
-paywall. This scraper extracts what is publicly accessible from the
-section pages and individual "Recommended" venue listings.
+Fetches restaurant reviews from the Good Food reviews section at
+smh.com.au/goodfood/reviews. Uses chromote to click "Show more" and
+load all review links, then fetches each detail page for venue name,
+score (/20 with .5 precision), cuisine, price, address, and suburb.
 }

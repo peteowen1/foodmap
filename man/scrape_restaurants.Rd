@@ -22,7 +22,7 @@ Default \code{FALSE}.}
 }
 \value{
 A tibble with columns: name, suburb, address, cuisine, category,
-description, price_range, latitude, longitude, url.
+description, price_range, rating, rating_scale, latitude, longitude, url.
 }
 \description{
 Unified dispatcher that calls the appropriate scraper for the given source.

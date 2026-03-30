@@ -69,7 +69,11 @@ gfg_fetch_review_links <- function(city) {
   on.exit(b$close(), add = TRUE)
 
   b$Page$navigate(gfg_reviews_url(city))
-  Sys.sleep(5)
+  # Wait for page load event, falling back to fixed sleep
+  tryCatch(
+    b$Page$loadEventFired(timeout = 10),
+    error = function(e) Sys.sleep(5)
+  )
 
   # Click "Show more" repeatedly to load all reviews
   cli::cli_alert_info("Expanding all reviews...")

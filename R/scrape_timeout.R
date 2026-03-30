@@ -6,7 +6,7 @@
 #' @param city Character. One of "sydney", "melbourne". Default `"sydney"`.
 #'
 #' @return A tibble with columns: name, suburb, address, cuisine, category,
-#'   description, price_range, latitude, longitude, url.
+#'   description, price_range, rating, rating_scale, latitude, longitude, url.
 #' @export
 scrape_timeout <- function(city = "sydney") {
   city <- validate_city_source(city, "timeout")
@@ -35,7 +35,12 @@ scrape_timeout <- function(city = "sydney") {
     dplyr::bind_rows()
 
   # Remove rows where name is NA (bad parse)
+  n_before <- nrow(result)
   result <- dplyr::filter(result, !is.na(.data$name))
+  n_dropped <- n_before - nrow(result)
+  if (n_dropped > 0) {
+    cli::cli_warn("{n_dropped}/{n_before} card{?s} failed to parse (no venue name)")
+  }
 
   cli::cli_alert_success("Found {nrow(result)} venue{?s}")
   result

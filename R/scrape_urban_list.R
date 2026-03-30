@@ -6,7 +6,7 @@
 #' @param city Character. One of "sydney", "melbourne". Default `"sydney"`.
 #'
 #' @return A tibble with columns: name, suburb, address, cuisine, category,
-#'   description, price_range, latitude, longitude, url.
+#'   description, price_range, rating, rating_scale, latitude, longitude, url.
 #' @export
 scrape_urban_list <- function(city = "sydney") {
   city <- validate_city_source(city, "urban_list")
@@ -37,6 +37,13 @@ scrape_urban_list <- function(city = "sydney") {
   }
 
   result <- urban_list_parse_content(content, city)
+
+  n_headings <- length(rvest::html_elements(content, "h2, h3"))
+  if (n_headings > 0 && nrow(result) < n_headings / 2) {
+    cli::cli_warn(
+      "Only {nrow(result)} venue{?s} parsed from {n_headings} heading{?s} \u2014 page structure may have changed"
+    )
+  }
 
   if (nrow(result) == 0) {
     cli::cli_abort("No restaurants found on Urban List page.")

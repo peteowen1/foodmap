@@ -17,7 +17,7 @@ automatically if static parsing finds no venues and chromote is available.}
 }
 \value{
 A tibble with columns: name, suburb, address, cuisine, category,
-description, price_range, latitude, longitude, url.
+description, price_range, rating, rating_scale, latitude, longitude, url.
 }
 \description{
 Fetches venue data from the Broadsheet Hotlist for a given city.
