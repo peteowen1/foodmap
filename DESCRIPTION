@@ -1,6 +1,6 @@
 Package: foodmap
 Title: Map Australia's Best Restaurants from Multiple Guides
-Version: 0.2.0
+Version: 0.3.0
 Authors@R: person("Peter", "Owen", email = "peter@bzi.com.au", role = c("aut", "cre"))
 Description: Scrapes restaurant guides (Broadsheet, Gourmet Traveller, Time Out,
     AGFG, Urban List, Good Food Guide), geocodes venues via the Google Places API,

@@ -1,3 +1,32 @@
+#' KML pin style colors by source
+#' @noRd
+source_style_id <- function(source) {
+  # Google Earth/Maps KML icon colors (aabbggrr format — alpha, blue, green, red)
+  styles <- c(
+    broadsheet        = "ff0000ff",  # red
+    gourmet_traveller = "ff00aa00",  # green
+    timeout           = "ffff8800",  # orange
+    urban_list        = "ffff00ff",  # magenta
+    agfg              = "ff00ccff",  # yellow
+    good_food_guide   = "ff0088ff",  # dark orange
+    multiple          = "ff00ffff"   # gold — venues in 2+ sources
+  )
+  # Use first source for combined strings like "broadsheet, timeout"
+  primary <- stringr::str_split(source, ",\\s*")[[1]][1]
+  if (grepl(",", source)) return(styles[["multiple"]])
+  styles[[primary]] %||% "ff0000ff"
+}
+
+#' Extract the primary (first) source from a possibly combined source string
+#' @noRd
+primary_source <- function(source) {
+  ifelse(
+    grepl(",", source),
+    "multiple",
+    source
+  )
+}
+
 #' Add a Placemark node to a KML parent element
 #' @noRd
 add_placemark <- function(parent, row) {
@@ -5,6 +34,9 @@ add_placemark <- function(parent, row) {
   # xml2::xml_add_child auto-escapes text nodes; xml_escape() is only
   # needed below where we build raw HTML strings via glue for descriptions
   xml2::xml_add_child(pm, "name", row$name)
+  if ("source" %in% names(row) && !is.na(row$source)) {
+    xml2::xml_add_child(pm, "styleUrl", paste0("#style_", primary_source(row$source)))
+  }
 
   desc_parts <- character(0)
   if (!is.na(row$address)) {
@@ -81,12 +113,25 @@ export_kml <- function(restaurants, output_path = "hotlist.kml") {
     glue::glue("Restaurant Map - {nrow(geo)} venues")
   )
 
+  # Add pin styles when source column exists
   if ("source" %in% names(geo)) {
-    # Group into folders by source
-    for (src in unique(geo$source)) {
+    geo$primary_source <- primary_source(geo$source)
+    for (src in unique(geo$primary_source)) {
+      style <- xml2::xml_add_child(document_node, "Style", id = paste0("style_", src))
+      icon_style <- xml2::xml_add_child(style, "IconStyle")
+      xml2::xml_add_child(icon_style, "color", source_style_id(src))
+      xml2::xml_add_child(icon_style, "scale", "1.0")
+      icon <- xml2::xml_add_child(icon_style, "Icon")
+      xml2::xml_add_child(icon, "href", "http://maps.google.com/mapfiles/kml/paddle/wht-blank.png")
+    }
+  }
+
+  if ("source" %in% names(geo)) {
+    # Group into folders by primary source
+    for (src in unique(geo$primary_source)) {
       folder <- xml2::xml_add_child(document_node, "Folder")
       xml2::xml_add_child(folder, "name", src)
-      src_rows <- geo[geo$source == src, ]
+      src_rows <- geo[geo$primary_source == src, ]
       for (i in seq_len(nrow(src_rows))) {
         add_placemark(folder, src_rows[i, ])
       }
