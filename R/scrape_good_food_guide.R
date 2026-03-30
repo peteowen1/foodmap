@@ -142,7 +142,7 @@ gfg_extract_venue_name <- function(kw_list, page) {
     "cake shop", "grocer", "pizzeria", "cellar door", "sandwich shop",
     "sandwiches", "noodle bar", "dumpling bar", "juice bar",
     # Meta / platform
-    "reviews", "good food app", "good weekend",
+    "reviews", "good food app", "good weekend", "suburb guides",
     "new south wales", "victoria", "queensland",
     "south australia", "western australia", "tasmania",
     "northern territory", "australian capital territory",
