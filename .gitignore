@@ -1,0 +1,5 @@
+debug/
+output/
+*.csv
+*.kml
+.claude/
