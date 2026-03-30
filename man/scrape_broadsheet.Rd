@@ -4,7 +4,7 @@
 \alias{scrape_broadsheet}
 \title{Scrape the Broadsheet Hotlist}
 \usage{
-scrape_broadsheet(city = "sydney", use_chromote = FALSE)
+scrape_broadsheet(city = "sydney", use_chromote = FALSE, use_cache = FALSE)
 }
 \arguments{
 \item{city}{Character. One of "sydney", "melbourne", "brisbane",

@@ -4,7 +4,7 @@
 \alias{scrape_urban_list}
 \title{Scrape The Urban List best restaurants}
 \usage{
-scrape_urban_list(city = "sydney")
+scrape_urban_list(city = "sydney", use_cache = FALSE)
 }
 \arguments{
 \item{city}{Character. One of "sydney", "melbourne". Default \code{"sydney"}.}

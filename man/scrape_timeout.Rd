@@ -4,7 +4,7 @@
 \alias{scrape_timeout}
 \title{Scrape Time Out best restaurants list}
 \usage{
-scrape_timeout(city = "sydney")
+scrape_timeout(city = "sydney", use_cache = FALSE)
 }
 \arguments{
 \item{city}{Character. One of "sydney", "melbourne". Default \code{"sydney"}.}

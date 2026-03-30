@@ -14,13 +14,14 @@
 #' @return A tibble with columns: name, suburb, address, cuisine, category,
 #'   description, price_range, rating, rating_scale, latitude, longitude, url.
 #' @export
-scrape_agfg <- function(city = "sydney", fetch_coordinates = TRUE) {
+scrape_agfg <- function(city = "sydney", fetch_coordinates = TRUE,
+                        use_cache = FALSE) {
   city <- validate_city_source(city, "agfg")
   state <- agfg_city_to_state(city)
   cli::cli_h1("Scraping AGFG Awards: {city} ({state})")
 
   # Phase 1: Fetch initial page + paginated results
-  all_rows <- agfg_fetch_all_listings(state)
+  all_rows <- agfg_fetch_all_listings(state, use_cache = use_cache)
 
   if (length(all_rows) == 0) {
     cli::cli_abort("No award-winning restaurants found on AGFG for {.val {state}}.")
@@ -41,7 +42,7 @@ scrape_agfg <- function(city = "sydney", fetch_coordinates = TRUE) {
         if (idx %% 50 == 0) {
           cli::cli_alert_info("  ...{idx}/{n_fetch}")
         }
-        agfg_fetch_detail(result$url[i])
+        agfg_fetch_detail(result$url[i], use_cache = use_cache)
       })
       for (idx in seq_along(details)) {
         row <- which(needs_detail)[idx]
@@ -103,16 +104,11 @@ agfg_state_coords <- function(state) {
 
 #' Fetch all AGFG award listing rows via initial page + AJAX pagination
 #' @noRd
-agfg_fetch_all_listings <- function(state) {
+agfg_fetch_all_listings <- function(state, use_cache = FALSE) {
   url <- glue::glue("https://www.agfg.com.au/awards/{state}")
   cli::cli_alert_info("Fetching {.url {url}}")
 
-  resp <- httr2::request(url) |>
-    httr2::req_headers(`User-Agent` = user_agent_string()) |>
-    httr2::req_retry(max_tries = 3) |>
-    httr2::req_perform()
-
-  html_text <- httr2::resp_body_string(resp)
+  html_text <- cached_fetch(url, use_cache = use_cache)
   page <- rvest::read_html(html_text)
 
   # Extract max page from hidden input
@@ -276,18 +272,16 @@ agfg_parse_row <- function(tr) {
 
 #' Fetch full details from an AGFG detail page's JSON-LD
 #' @noRd
-agfg_fetch_detail <- function(url) {
+agfg_fetch_detail <- function(url, use_cache = FALSE) {
   Sys.sleep(RATE_LIMIT_SECS)
-  resp <- tryCatch(
-    httr2::request(url) |>
-      httr2::req_headers(`User-Agent` = user_agent_string()) |>
-      httr2::req_retry(max_tries = 2) |>
-      httr2::req_perform(),
+
+  html <- tryCatch(
+    cached_fetch(url, use_cache = use_cache),
     error = function(e) NULL
   )
-  if (is.null(resp)) return(NULL)
+  if (is.null(html)) return(NULL)
 
-  page <- httr2::resp_body_string(resp) |> rvest::read_html()
+  page <- rvest::read_html(html)
   json_ld <- rvest::html_element(page, "script[type='application/ld+json']") |>
     rvest::html_text()
 

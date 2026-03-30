@@ -4,7 +4,7 @@
 \alias{scrape_agfg}
 \title{Scrape AGFG (Australian Good Food Guide) award-winning restaurants}
 \usage{
-scrape_agfg(city = "sydney", fetch_coordinates = TRUE)
+scrape_agfg(city = "sydney", fetch_coordinates = TRUE, use_cache = FALSE)
 }
 \arguments{
 \item{city}{Character. One of "sydney", "melbourne", "brisbane", "adelaide",

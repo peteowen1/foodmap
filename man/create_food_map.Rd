@@ -9,7 +9,8 @@ create_food_map(
   source = "broadsheet",
   output_dir = ".",
   api_key = NULL,
-  use_chromote = FALSE
+  use_chromote = FALSE,
+  use_cache = FALSE
 )
 }
 \arguments{
@@ -27,6 +28,9 @@ Defaults to the current working directory.}
 
 \item{use_chromote}{Logical. Force headless Chrome rendering.
 Default \code{FALSE} (auto-falls back if needed).}
+
+\item{use_cache}{Logical. Cache HTTP responses locally to avoid re-fetching.
+Default \code{FALSE}.}
 }
 \value{
 A tibble of geocoded restaurants (invisibly).

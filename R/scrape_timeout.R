@@ -8,18 +8,14 @@
 #' @return A tibble with columns: name, suburb, address, cuisine, category,
 #'   description, price_range, rating, rating_scale, latitude, longitude, url.
 #' @export
-scrape_timeout <- function(city = "sydney") {
+scrape_timeout <- function(city = "sydney", use_cache = FALSE) {
   city <- validate_city_source(city, "timeout")
   cli::cli_h1("Scraping Time Out: {city}")
 
   url <- timeout_url(city)
   cli::cli_alert_info("Fetching {.url {url}}")
 
-  page <- httr2::request(url) |>
-    httr2::req_headers(`User-Agent` = user_agent_string()) |>
-    httr2::req_retry(max_tries = 3) |>
-    httr2::req_perform() |>
-    httr2::resp_body_string() |>
+  page <- cached_fetch(url, use_cache = use_cache) |>
     rvest::read_html()
 
   # Select restaurant articles, excluding promotional recirc cards

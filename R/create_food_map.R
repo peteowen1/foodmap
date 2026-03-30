@@ -14,6 +14,8 @@
 #'   `GOOGLE_PLACES_API_KEY` environment variable.
 #' @param use_chromote Logical. Force headless Chrome rendering.
 #'   Default `FALSE` (auto-falls back if needed).
+#' @param use_cache Logical. Cache HTTP responses locally to avoid re-fetching.
+#'   Default `FALSE`.
 #'
 #' @return A tibble of geocoded restaurants (invisibly).
 #' @export
@@ -28,7 +30,8 @@ create_food_map <- function(city = "sydney",
                             source = "broadsheet",
                             output_dir = ".",
                             api_key = NULL,
-                            use_chromote = FALSE) {
+                            use_chromote = FALSE,
+                            use_cache = FALSE) {
 
   source <- match.arg(source, valid_sources())
   city <- validate_city_source(city, source)
@@ -40,12 +43,15 @@ create_food_map <- function(city = "sydney",
 
   # 1. Scrape
   restaurants <- scrape_restaurants(
-    city = city, source = source, use_chromote = use_chromote
+    city = city, source = source, use_chromote = use_chromote,
+    use_cache = use_cache
   )
 
   if (nrow(restaurants) == 0) {
     cli::cli_abort("Scraping returned 0 venues for {.val {source}} in {.val {city}}.")
   }
+
+  restaurants$source <- source
 
   # 2. Geocode (only rows missing coordinates)
   restaurants <- geocode_restaurants(restaurants, api_key = api_key)

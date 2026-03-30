@@ -4,7 +4,7 @@
 \alias{scrape_gourmet_traveller}
 \title{Scrape Gourmet Traveller restaurant guide}
 \usage{
-scrape_gourmet_traveller(city = "sydney")
+scrape_gourmet_traveller(city = "sydney", use_cache = FALSE)
 }
 \arguments{
 \item{city}{Character. One of "sydney", "melbourne". Default \code{"sydney"}.}

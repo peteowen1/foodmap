@@ -7,7 +7,8 @@
 scrape_restaurants(
   city = "sydney",
   source = "broadsheet",
-  use_chromote = FALSE
+  use_chromote = FALSE,
+  use_cache = FALSE
 )
 }
 \arguments{
@@ -18,6 +19,10 @@ scrape_restaurants(
 \code{"good_food_guide"}. Default \code{"broadsheet"}.}
 
 \item{use_chromote}{Logical. Force headless Chrome rendering where applicable.
+Default \code{FALSE}.}
+
+\item{use_cache}{Logical. If \code{TRUE}, cache HTTP responses locally to avoid
+re-fetching during development. Cached responses expire after 24 hours.
 Default \code{FALSE}.}
 }
 \value{

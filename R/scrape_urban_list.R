@@ -8,28 +8,40 @@
 #' @return A tibble with columns: name, suburb, address, cuisine, category,
 #'   description, price_range, rating, rating_scale, latitude, longitude, url.
 #' @export
-scrape_urban_list <- function(city = "sydney") {
+scrape_urban_list <- function(city = "sydney", use_cache = FALSE) {
   city <- validate_city_source(city, "urban_list")
   cli::cli_h1("Scraping The Urban List: {city}")
 
   url <- urban_list_url(city)
   cli::cli_alert_info("Fetching {.url {url}}")
 
-  resp <- httr2::request(url) |>
-    httr2::req_headers(`User-Agent` = user_agent_string()) |>
-    httr2::req_retry(max_tries = 3) |>
-    httr2::req_error(is_error = function(resp) FALSE) |>
-    httr2::req_perform()
-
-  if (httr2::resp_status(resp) != 200) {
-    cli::cli_abort(c(
-      "Failed to fetch Urban List page (status {httr2::resp_status(resp)}).",
-      "i" = "The page may be behind Cloudflare protection."
-    ))
+  # Urban List may be behind Cloudflare — check status before parsing
+  if (use_cache) {
+    cached <- cache_get(url)
+    if (!is.null(cached)) {
+      cli::cli_alert_info("Using cached response for {.url {url}}")
+      page <- rvest::read_html(cached)
+    }
   }
 
-  page <- httr2::resp_body_string(resp) |>
-    rvest::read_html()
+  if (!exists("page", inherits = FALSE)) {
+    resp <- httr2::request(url) |>
+      httr2::req_headers(`User-Agent` = user_agent_string()) |>
+      httr2::req_retry(max_tries = 3) |>
+      httr2::req_error(is_error = function(resp) FALSE) |>
+      httr2::req_perform()
+
+    if (httr2::resp_status(resp) != 200) {
+      cli::cli_abort(c(
+        "Failed to fetch Urban List page (status {httr2::resp_status(resp)}).",
+        "i" = "The page may be behind Cloudflare protection."
+      ))
+    }
+
+    html <- httr2::resp_body_string(resp)
+    if (use_cache) cache_set(url, html)
+    page <- rvest::read_html(html)
+  }
 
   content <- rvest::html_element(page, ".editable-content")
   if (is.na(content) || length(content) == 0) {

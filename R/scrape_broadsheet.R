@@ -12,7 +12,8 @@
 #' @return A tibble with columns: name, suburb, address, cuisine, category,
 #'   description, price_range, rating, rating_scale, latitude, longitude, url.
 #' @export
-scrape_broadsheet <- function(city = "sydney", use_chromote = FALSE) {
+scrape_broadsheet <- function(city = "sydney", use_chromote = FALSE,
+                              use_cache = FALSE) {
 
   broadsheet_url(city)  # validates city
   cli::cli_h1("Scraping Broadsheet Hotlist: {city}")
@@ -30,12 +31,7 @@ scrape_broadsheet <- function(city = "sydney", use_chromote = FALSE) {
     cli::cli_alert_info("API approach failed, trying static HTML extraction...")
     url <- broadsheet_url(city)
     cli::cli_alert_info("Fetching {.url {url}}")
-    resp <- httr2::request(url) |>
-      httr2::req_headers(`User-Agent` = user_agent_string()) |>
-      httr2::req_retry(max_tries = 3) |>
-      httr2::req_perform()
-
-    html_text <- httr2::resp_body_string(resp)
+    html_text <- cached_fetch(url, use_cache = use_cache)
     venues <- extract_venues_from_rsc(html_text)
   }
 
