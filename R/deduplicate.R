@@ -24,12 +24,14 @@ deduplicate_restaurants <- function(restaurants) {
     stringr::str_remove_all("[^a-z0-9 ]") |>
     stringr::str_squish()
 
-  # Normalize suburb
-  restaurants$suburb_norm <- tolower(stringr::str_squish(
-    restaurants$suburb %||% ""
-  ))
+  # Normalize suburb — strip common suffixes so "Sydney CBD" matches "Sydney"
+  restaurants$suburb_norm <- restaurants$suburb |>
+    tolower() |>
+    stringr::str_squish() |>
+    stringr::str_remove("\\s+(cbd|city|central|centre|east|west|north|south)$")
 
-  restaurants$suburb_norm[restaurants$suburb_norm == ""] <- NA_character_
+  restaurants$suburb_norm[is.na(restaurants$suburb) |
+                          restaurants$suburb_norm == ""] <- NA_character_
 
   # Group by normalized name + suburb (treat NA suburb as wildcard)
   # Build groups manually to handle the NA-suburb wildcard matching
