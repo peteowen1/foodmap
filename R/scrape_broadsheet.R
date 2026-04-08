@@ -8,6 +8,7 @@
 #'   via chromote to render the page fully (loads all venues). If `FALSE`
 #'   (default), parse the static HTML only. Falls back to chromote
 #'   automatically if static parsing finds no venues and chromote is available.
+#' @param use_cache Logical. Use cached HTTP responses if available. Default `FALSE`.
 #'
 #' @return A tibble with columns: name, suburb, address, cuisine, category,
 #'   description, price_range, rating, rating_scale, latitude, longitude, url.
