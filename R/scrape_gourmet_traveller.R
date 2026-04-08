@@ -4,6 +4,7 @@
 #' Uses static HTML parsing via rvest — no JavaScript rendering needed.
 #'
 #' @param city Character. One of "sydney", "melbourne". Default `"sydney"`.
+#' @param use_cache Logical. Use cached HTTP responses if available. Default `FALSE`.
 #'
 #' @return A tibble with columns: name, suburb, address, cuisine, category,
 #'   description, price_range, rating, rating_scale, latitude, longitude, url.

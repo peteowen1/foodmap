@@ -10,6 +10,7 @@
 #' @param fetch_coordinates Logical. If `TRUE` (default), fetch each venue's
 #'   detail page to extract lat/lng and address from JSON-LD. Slower but avoids
 #'   needing Google Places API geocoding.
+#' @param use_cache Logical. Use cached HTTP responses if available. Default `FALSE`.
 #'
 #' @return A tibble with columns: name, suburb, address, cuisine, category,
 #'   description, price_range, rating, rating_scale, latitude, longitude, url.
