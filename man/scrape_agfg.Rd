@@ -13,6 +13,8 @@ scrape_agfg(city = "sydney", fetch_coordinates = TRUE, use_cache = FALSE)
 \item{fetch_coordinates}{Logical. If \code{TRUE} (default), fetch each venue's
 detail page to extract lat/lng and address from JSON-LD. Slower but avoids
 needing Google Places API geocoding.}
+
+\item{use_cache}{Logical. Use cached HTTP responses if available. Default \code{FALSE}.}
 }
 \value{
 A tibble with columns: name, suburb, address, cuisine, category,

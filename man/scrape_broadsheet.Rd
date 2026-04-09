@@ -14,6 +14,8 @@ scrape_broadsheet(city = "sydney", use_chromote = FALSE, use_cache = FALSE)
 via chromote to render the page fully (loads all venues). If \code{FALSE}
 (default), parse the static HTML only. Falls back to chromote
 automatically if static parsing finds no venues and chromote is available.}
+
+\item{use_cache}{Logical. Use cached HTTP responses if available. Default \code{FALSE}.}
 }
 \value{
 A tibble with columns: name, suburb, address, cuisine, category,

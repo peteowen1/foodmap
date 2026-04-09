@@ -8,6 +8,8 @@ scrape_gourmet_traveller(city = "sydney", use_cache = FALSE)
 }
 \arguments{
 \item{city}{Character. One of "sydney", "melbourne". Default \code{"sydney"}.}
+
+\item{use_cache}{Logical. Use cached HTTP responses if available. Default \code{FALSE}.}
 }
 \value{
 A tibble with columns: name, suburb, address, cuisine, category,
