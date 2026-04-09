@@ -11,7 +11,10 @@
 #' @export
 export_csv <- function(restaurants, output_path = "hotlist.csv") {
   tryCatch(
-    utils::write.csv(restaurants, output_path, row.names = FALSE),
+    {
+      utils::write.csv(restaurants, output_path, row.names = FALSE)
+      cli::cli_alert_success("CSV written to {.file {output_path}} ({nrow(restaurants)} venues)")
+    },
     error = function(e) {
       cli::cli_abort(c(
         "Failed to write CSV to {.file {output_path}}.",
@@ -19,6 +22,5 @@ export_csv <- function(restaurants, output_path = "hotlist.csv") {
       ))
     }
   )
-  cli::cli_alert_success("CSV written to {.file {output_path}} ({nrow(restaurants)} venues)")
   invisible(output_path)
 }
