@@ -317,6 +317,12 @@ filter_panel_html <- function(tier_order, all_sources, all_cuisines = character(
     section_html(
       "Cuisine", "fm-cuisine",
       paste0(
+        # Mini search to narrow the cuisine list (handy when there are
+        # 30+ cuisines — type "french" to surface just that checkbox)
+        "<input type='text' id='fm-cuisine-search' placeholder='filter cuisines...' ",
+        "style='width:100%;box-sizing:border-box;font-family:inherit;",
+        "font-size:11px;padding:3px 5px;margin-bottom:4px;",
+        "border:1px solid #ccc;border-radius:4px'>",
         "<div style='max-height:120px;overflow-y:auto;border:1px solid #eee;",
         "border-radius:4px;padding:4px 6px;background:#fafafa'>",
         paste(cuisine_rows, collapse = ""),
@@ -495,17 +501,40 @@ function(el, x) {
   var searchInput = document.getElementById('fm-search');
   if (searchInput) searchInput.addEventListener('input', applyFilter);
 
-  // All/none toggle buttons set every checkbox in the named group at once
+  // All/none toggle buttons. When applied to the cuisine group these
+  // respect the visibility filter: clicking the all button after
+  // typing french ticks only the visible French entries, leaving any
+  // hidden cuisines as they were.
   document.querySelectorAll('.fm-toggle').forEach(function(btn) {
     btn.addEventListener('click', function(e) {
       e.preventDefault();
       e.stopPropagation();
       var cls = btn.getAttribute('data-target');
       var on  = btn.getAttribute('data-value') === '1';
-      document.querySelectorAll('.' + cls).forEach(function(cb) { cb.checked = on; });
+      document.querySelectorAll('.' + cls).forEach(function(cb) {
+        var label = cb.parentElement;
+        if (label && label.style.display === 'none') return;
+        cb.checked = on;
+      });
       applyFilter();
     });
   });
+
+  // Cuisine search — filters which cuisine checkboxes are visible
+  // (does not change checked state). Combine with the All/None buttons
+  // to chain: untick all, search french, tick all visible.
+  var cuisineSearch = document.getElementById('fm-cuisine-search');
+  if (cuisineSearch) {
+    cuisineSearch.addEventListener('input', function() {
+      var q = cuisineSearch.value.trim().toLowerCase();
+      document.querySelectorAll('.fm-cuisine').forEach(function(cb) {
+        var label = cb.parentElement;
+        if (!label) return;
+        var match = !q || cb.value.toLowerCase().indexOf(q) !== -1;
+        label.style.display = match ? '' : 'none';
+      });
+    });
+  }
 
   // Main panel header — toggles the entire body
   var header = document.querySelector('.foodmap-filter .fm-header');
