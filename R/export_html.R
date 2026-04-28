@@ -104,7 +104,10 @@ export_html <- function(restaurants,
       popup   = geo$popup_html[i],
       color   = geo$pin_color[i],
       tier    = geo$tier[i],
-      sources = sources_split[[i]]
+      # I() prevents jsonlite::toJSON(auto_unbox = TRUE) from collapsing
+      # a length-1 character vector into a bare string (which would
+      # break .some()/.every() on the JS side)
+      sources = I(sources_split[[i]])
     )
   })
   marker_json <- jsonlite::toJSON(marker_records, auto_unbox = TRUE,
@@ -268,7 +271,12 @@ function(el, x) {
     var marker = L.marker([d.lat, d.lng], { icon: icon, title: d.name });
     marker.bindPopup(d.popup);
     marker._fmTier    = d.tier;
-    marker._fmSources = d.sources || [];
+    // Defensive: serializers sometimes collapse 1-element arrays to a
+    // bare string. Promote to array so .some()/.every() work.
+    var src = d.sources;
+    if (typeof src === 'string') src = [src];
+    if (!src) src = [];
+    marker._fmSources = src;
     return marker;
   });
 
