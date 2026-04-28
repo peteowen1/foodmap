@@ -3,3 +3,8 @@
 ^\.github$
 ^\.positai$
 ^\.claude$
+^CLAUDE\.md$
+^analysis$
+^cache$
+^docs$
+^output$

@@ -29,11 +29,13 @@ test_that("format_price handles NA and zero", {
   expect_equal(format_price(0), "")
 })
 
-test_that("valid_sources returns all six sources", {
+test_that("valid_sources returns all expected sources", {
   sources <- valid_sources()
-  expect_length(sources, 6)
-  expect_true(all(c("broadsheet", "gourmet_traveller", "timeout",
-                     "urban_list", "agfg", "good_food_guide") %in% sources))
+  expected <- c("broadsheet", "gourmet_traveller", "timeout",
+                "urban_list", "agfg", "good_food_guide",
+                "gfg_awards", "concrete_playground")
+  expect_length(sources, length(expected))
+  expect_setequal(sources, expected)
 })
 
 test_that("supported_cities_for_source returns correct cities", {

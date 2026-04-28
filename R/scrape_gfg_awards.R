@@ -4,7 +4,7 @@
 #' Guide 2026 Awards (Sydney/NSW/ACT edition). Sourced from the SMH
 #' awards article (October 2025). Unlike [scrape_good_food_guide()] which
 #' fetches individual review pages via chromote (limited by the paywall),
-#' this returns the curated annual awards list with hat counts only — useful
+#' this returns the curated annual awards list with hat counts only - useful
 #' for high-recall coverage of every hatted venue without per-review scraping.
 #'
 #' @param city Character. Currently only `"sydney"` (the SMH guide covers
@@ -131,7 +131,11 @@ gfg_awards_2026_records <- function() {
     "Grandfathers",                                   "Sydney CBD",             TRUE,
     "Haco",                                           "Sydney CBD",             FALSE,
     "Ho Jiak Town Hall",                              "Sydney CBD",             FALSE,
-    "Ibushi",                                         NA_character_,            TRUE,
+    # The 5 venues below appeared in the SMH article without a suburb
+    # listed. Setting suburb to "Sydney" gives the geocoder a city
+    # hint - without it, ambiguous names like "Yan" can resolve to
+    # the wrong city.
+    "Ibushi",                                         "Sydney",                 TRUE,
     "Infinity by Mark Best",                          "Sydney CBD",             TRUE,
     "Ito",                                            "Surry Hills",            FALSE,
     "Jane",                                           "Surry Hills",            FALSE,
@@ -148,7 +152,7 @@ gfg_awards_2026_records <- function() {
     "Neptune's Grotto",                               "Sydney CBD",             TRUE,
     "Nour",                                           "Surry Hills",            FALSE,
     "Olympus Dining",                                 "Redfern",                TRUE,
-    "Omakase by Prefecture 48",                       NA_character_,            TRUE,
+    "Omakase by Prefecture 48",                       "Sydney",                 TRUE,
     "Osteria di Russo & Russo",                       "Enmore",                 FALSE,
     "Osteria Mucca",                                  "Newtown",                TRUE,
     "Otto Ristorante",                                "Woolloomooloo",          FALSE,
@@ -173,10 +177,10 @@ gfg_awards_2026_records <- function() {
     "Viand",                                          "Woolloomooloo",          FALSE,
     "Vin-Cenzo's",                                    "Darlinghurst",           TRUE,
     "Vineria Luisa",                                  "Enmore",                 TRUE,
-    "The White Horse",                                NA_character_,            FALSE,
+    "The White Horse",                                "Sydney",                 FALSE,
     "Woodcut",                                        "Barangaroo",             FALSE,
-    "Yan",                                            NA_character_,            FALSE,
-    "Yeodongsik",                                     NA_character_,            FALSE,
+    "Yan",                                            "Sydney",                 FALSE,
+    "Yeodongsik",                                     "Sydney",                 FALSE,
     # Regional and ACT
     "Ates",                                           "Blackheath",             FALSE,
     "Bangalay Dining",                                "Shoalhaven Heads",       FALSE,
@@ -239,7 +243,7 @@ gfg_awards_to_tibble <- function(records) {
     cuisine      = NA_character_,
     category     = "Restaurant",
     description  = paste0(
-      "SMH Good Food Guide 2026 — ", .data$hats, " hat",
+      "SMH Good Food Guide 2026 - ", .data$hats, " hat",
       ifelse(.data$hats > 1, "s", ""),
       ifelse(.data$is_new, " (NEW for 2026)", "")
     ),

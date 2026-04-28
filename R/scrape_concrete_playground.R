@@ -3,7 +3,7 @@
 #' Concrete Playground runs a 1400-venue restaurant directory plus a
 #' tightly-curated editorial "best of" article. We pull the curated
 #' list rather than the directory because the directory's user-rating
-#' filter is client-side only — it doesn't actually constrain the page
+#' filter is client-side only - it doesn't actually constrain the page
 #' response, so scraping their high-confidence picks means scraping the
 #' editorial guide.
 #'
@@ -38,7 +38,7 @@ scrape_concrete_playground <- function(city = "sydney", use_cache = FALSE) {
   pages <- list(page1)
   if (!is.na(total) && per_page > 0 && total > per_page) {
     n_pages <- ceiling(total / per_page)
-    cli::cli_alert_info("{total} CP Picks total — fetching {n_pages - 1} more page{?s}")
+    cli::cli_alert_info("{total} CP Picks total - fetching {n_pages - 1} more page{?s}")
     for (p in seq.int(2, n_pages)) {
       Sys.sleep(RATE_LIMIT_SECS)
       url_p <- paste0(base_url, "&paged=", p)
@@ -124,7 +124,7 @@ cp_parse_card <- function(card) {
 
   name <- decode_html_entities(di$name)
 
-  # Address is "<street>, <suburb>" — split on last comma to get suburb
+  # Address is "<street>, <suburb>" - split on last comma to get suburb
   raw_addr <- decode_html_entities(di$address %||% NA_character_)
   suburb   <- NA_character_
   if (!is.na(raw_addr) && grepl(",", raw_addr)) {

@@ -89,7 +89,7 @@ export_html <- function(restaurants,
   }
   all_sources <- sort(unique(unlist(sources_split)))
 
-  # Cuisine list per venue — one venue can list several (e.g. "Italian, Pizza")
+  # Cuisine list per venue - one venue can list several (e.g. "Italian, Pizza")
   cuisines_split <- if ("cuisine" %in% names(geo)) {
     lapply(strsplit(geo$cuisine, ",\\s*"), function(x) {
       x <- x[!is.na(x) & nzchar(x)]
@@ -105,7 +105,7 @@ export_html <- function(restaurants,
                            character(1),
                            geo = geo)
 
-  # Marker payload for JS — kept lean (popup HTML is the heaviest field)
+  # Marker payload for JS - kept lean (popup HTML is the heaviest field)
   marker_records <- lapply(seq_len(nrow(geo)), function(i) {
     list(
       id        = paste0("v", i),
@@ -192,7 +192,7 @@ build_popup_html <- function(i, geo) {
 
   rating <- if ("rating_label" %in% names(geo)) geo$rating_label[i] else NA
   if (!is.na(rating) && nchar(rating) > 0) {
-    parts <- c(parts, sprintf("⭐ %s", esc(rating)))
+    parts <- c(parts, sprintf("\u2b50 %s", esc(rating)))
   }
 
   if (!is.na(geo$cuisine[i]) && nchar(geo$cuisine[i]) > 0) {
@@ -225,7 +225,7 @@ build_popup_html <- function(i, geo) {
 }
 
 
-#' Build the filter-panel HTML — collapsible header with venue counter,
+#' Build the filter-panel HTML - collapsible header with venue counter,
 #' name search, tier/guide/cuisine checkbox sections (each with all/none
 #' toggles), and a min-selected-guides-matched dropdown.
 #' @noRd
@@ -287,10 +287,10 @@ filter_panel_html <- function(tier_order, all_sources, all_cuisines = character(
     )
   }
 
-  # Min-guides select: 1 = "any", 2..N = "≥N guides"
+  # Min-guides select: 1 = "any", 2..N = "\u2265N guides"
   min_options <- vapply(seq_len(7), function(n) {
     sel <- if (n == 1) " selected" else ""
-    label <- if (n == 1) "any" else paste0("≥ ", n)
+    label <- if (n == 1) "any" else paste0("\u2265 ", n)
     sprintf("<option value='%d'%s>%s</option>", n, sel, label)
   }, character(1))
 
@@ -303,7 +303,7 @@ filter_panel_html <- function(tier_order, all_sources, all_cuisines = character(
       "margin-bottom:4px;cursor:pointer;user-select:none;",
       "display:flex;align-items:center;gap:6px'>",
       "<span class='fm-section-toggle' style='display:inline-block;",
-      "width:12px;text-align:center;font-size:10px'>▼</span>",
+      "width:12px;text-align:center;font-size:10px'>\u25bc</span>",
       "<span style='flex:1'>", label, "</span>",
       toggle_btns(toggle_target),
       "</div>",
@@ -318,7 +318,7 @@ filter_panel_html <- function(tier_order, all_sources, all_cuisines = character(
       "Cuisine", "fm-cuisine",
       paste0(
         # Mini search to narrow the cuisine list (handy when there are
-        # 30+ cuisines — type "french" to surface just that checkbox)
+        # 30+ cuisines - type "french" to surface just that checkbox)
         "<input type='text' id='fm-cuisine-search' placeholder='filter cuisines...' ",
         "style='width:100%;box-sizing:border-box;font-family:inherit;",
         "font-size:11px;padding:3px 5px;margin-bottom:4px;",
@@ -335,7 +335,7 @@ filter_panel_html <- function(tier_order, all_sources, all_cuisines = character(
     "<div class='foodmap-filter' style='background:rgba(255,255,255,0.96);",
     "padding:0;border-radius:8px;font-family:sans-serif;font-size:12px;",
     "box-shadow:0 1px 6px rgba(0,0,0,0.18);max-width:260px;line-height:1.55'>",
-    # Header — always visible, holds toggle + counter
+    # Header - always visible, holds toggle + counter
     "<div class='fm-header' style='padding:8px 12px;display:flex;",
     "align-items:center;justify-content:space-between;gap:8px;",
     "cursor:pointer;user-select:none'>",
@@ -344,7 +344,7 @@ filter_panel_html <- function(tier_order, all_sources, all_cuisines = character(
     "&#9660;</span> foodmap</span>",
     "<span id='fm-count' style='color:#666;font-size:11px'></span>",
     "</div>",
-    # Body — collapsible
+    # Body - collapsible
     "<div class='fm-body' style='padding:0 12px 10px 12px;",
     "border-top:1px solid #eee'>",
     # Search input
@@ -352,7 +352,7 @@ filter_panel_html <- function(tier_order, all_sources, all_cuisines = character(
     "<input type='text' id='fm-search' placeholder='Venue name...' ",
     "style='width:100%;box-sizing:border-box;font-family:inherit;",
     "font-size:12px;padding:4px 6px;border:1px solid #ccc;border-radius:4px'>",
-    # Tier / Guide sections — both wrapped in collapsible .fm-section
+    # Tier / Guide sections - both wrapped in collapsible .fm-section
     section_html("Tier",  "fm-tier",   paste(tier_rows, collapse = "")),
     section_html("Guide", "fm-source", paste(source_rows, collapse = "")),
     # Min-guides: must appear in at least N of the *selected* guides
@@ -492,7 +492,7 @@ function(el, x) {
     }
   }
 
-  // Wire up listeners — every checkbox/select re-applies the filter
+  // Wire up listeners - every checkbox/select re-applies the filter
   document.querySelectorAll('.fm-tier, .fm-source, .fm-cuisine').forEach(function(input) {
     input.addEventListener('change', applyFilter);
   });
@@ -520,7 +520,7 @@ function(el, x) {
     });
   });
 
-  // Cuisine search — filters which cuisine checkboxes are visible
+  // Cuisine search - filters which cuisine checkboxes are visible
   // (does not change checked state). Combine with the All/None buttons
   // to chain: untick all, search french, tick all visible.
   var cuisineSearch = document.getElementById('fm-cuisine-search');
@@ -536,7 +536,7 @@ function(el, x) {
     });
   }
 
-  // Main panel header — toggles the entire body
+  // Main panel header - toggles the entire body
   var header = document.querySelector('.foodmap-filter .fm-header');
   var body   = document.querySelector('.foodmap-filter .fm-body');
   var icon   = document.querySelector('.foodmap-filter .fm-toggle-icon');
@@ -544,11 +544,11 @@ function(el, x) {
     header.addEventListener('click', function() {
       var hidden = body.style.display === 'none';
       body.style.display = hidden ? '' : 'none';
-      if (icon) icon.textContent = hidden ? '▼' : '▶';
+      if (icon) icon.textContent = hidden ? '\u25bc' : '\u25b6';
     });
   }
 
-  // Per-section headers — each toggles its own .fm-section-body. Ignore
+  // Per-section headers - each toggles its own .fm-section-body. Ignore
   // clicks that originated on the All/None buttons (they have their own
   // handlers and call stopPropagation, but a defensive tag check keeps
   // the rule explicit).
@@ -561,7 +561,7 @@ function(el, x) {
       if (!sbody) return;
       var hidden = sbody.style.display === 'none';
       sbody.style.display = hidden ? '' : 'none';
-      if (sicon) sicon.textContent = hidden ? '▼' : '▶';
+      if (sicon) sicon.textContent = hidden ? '\u25bc' : '\u25b6';
     });
   });
 

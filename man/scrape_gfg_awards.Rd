@@ -20,7 +20,7 @@ Returns the full list of hat-winning restaurants from the SMH Good Food
 Guide 2026 Awards (Sydney/NSW/ACT edition). Sourced from the SMH
 awards article (October 2025). Unlike \code{\link[=scrape_good_food_guide]{scrape_good_food_guide()}} which
 fetches individual review pages via chromote (limited by the paywall),
-this returns the curated annual awards list with hat counts only — useful
+this returns the curated annual awards list with hat counts only - useful
 for high-recall coverage of every hatted venue without per-review scraping.
 }
 \examples{

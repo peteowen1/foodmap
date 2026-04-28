@@ -39,7 +39,6 @@ deduplicate_restaurants <- function(restaurants) {
   restaurants$name_norm <- restaurants$name |>
     stringi::stri_trans_general("Latin-ASCII") |>
     tolower() |>
-    stringr::str_replace_all("’", "'") |>
     stringr::str_replace_all("\\s*[&+]\\s*", " and ") |>
     stringr::str_replace_all("\\bstreet\\b", "st") |>
     stringr::str_replace_all("\\broad\\b", "rd") |>
@@ -52,7 +51,7 @@ deduplicate_restaurants <- function(restaurants) {
     stringr::str_remove_all("[^a-z0-9 ]") |>
     stringr::str_squish()
 
-  # Normalize suburb — strip common suffixes so "Sydney CBD" matches "Sydney"
+  # Normalize suburb - strip common suffixes so "Sydney CBD" matches "Sydney"
   # and "Campbell ACT" matches "Campbell"
   restaurants$suburb_norm <- restaurants$suburb |>
     stringi::stri_trans_general("Latin-ASCII") |>
@@ -115,7 +114,7 @@ deduplicate_restaurants <- function(restaurants) {
   restaurants$suburb_norm[is.na(restaurants$suburb) |
                           restaurants$suburb_norm == ""] <- NA_character_
 
-  # Pass 1 — exact normalized name + suburb (treat NA suburb as wildcard)
+  # Pass 1 - exact normalized name + suburb (treat NA suburb as wildcard)
   groups <- list()
   assigned <- rep(FALSE, nrow(restaurants))
 
@@ -135,7 +134,7 @@ deduplicate_restaurants <- function(restaurants) {
     groups <- c(groups, list(matches))
   }
 
-  # Pass 2 — prefix matching for short-name variants like
+  # Pass 2 - prefix matching for short-name variants like
   # "Ester" / "Ester Restaurant & Bar" or "Bessie's" / "Bessie's and Alma's".
   # When one group's normalized name is a strict word-boundary prefix of
   # another's, with compatible suburbs, fold the shorter into the longer.
@@ -143,7 +142,7 @@ deduplicate_restaurants <- function(restaurants) {
   # while still catching short brand names like "LuMi" or "Maiz".
   groups <- gfg_dedup_prefix_pass(groups, restaurants)
 
-  # Pass 3 — address-based matching. Same physical address = same venue,
+  # Pass 3 - address-based matching. Same physical address = same venue,
   # regardless of how the name or suburb is written. Catches cases like
   # Askal (167 Exhibition St, listed as Melbourne by Broadsheet but East
   # Melbourne by AGFG) or O.My (one row says "1/70 Princes Hwy", another
@@ -252,7 +251,7 @@ gfg_dedup_prefix_pass <- function(groups, restaurants) {
     prefix_with_space <- paste0(name_i, " ")
 
     # Collect ALL longer-named groups that share the prefix and a
-    # compatible suburb — siblings like "LuMi Dining" / "LuMi Bar &
+    # compatible suburb - siblings like "LuMi Dining" / "LuMi Bar &
     # Dining" should both fold in via "LuMi" as the connector.
     matches <- integer(0)
     for (j in ord) {
@@ -351,7 +350,7 @@ canonical_address <- function(addr) {
     tolower() |>
     # Strip parenthetical notes like "(cnr of Souter St)"
     stringr::str_remove_all("\\([^)]*\\)") |>
-    # Collapse "1/70" / "5/850" → just the building number
+    # Collapse "1/70" / "5/850" -> just the building number
     stringr::str_replace_all("\\b\\d+/(\\d+)\\b", "\\1") |>
     # Treat commas as separators so "Shop 5/850, Heidelberg-Kinglake Rd"
     # collapses to a single space-separated string the pattern can find

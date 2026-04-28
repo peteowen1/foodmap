@@ -22,7 +22,7 @@ longitude, url.
 Concrete Playground runs a 1400-venue restaurant directory plus a
 tightly-curated editorial "best of" article. We pull the curated
 list rather than the directory because the directory's user-rating
-filter is client-side only — it doesn't actually constrain the page
+filter is client-side only - it doesn't actually constrain the page
 response, so scraping their high-confidence picks means scraping the
 editorial guide.
 }
