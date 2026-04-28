@@ -131,11 +131,11 @@ gfg_awards_2026_records <- function() {
     "Grandfathers",                                   "Sydney CBD",             TRUE,
     "Haco",                                           "Sydney CBD",             FALSE,
     "Ho Jiak Town Hall",                              "Sydney CBD",             FALSE,
-    # The 5 venues below appeared in the SMH article without a suburb
-    # listed. Setting suburb to "Sydney" gives the geocoder a city
-    # hint - without it, ambiguous names like "Yan" can resolve to
-    # the wrong city.
-    "Ibushi",                                         "Sydney",                 TRUE,
+    # The 5 venues below appeared in the SMH article without a suburb.
+    # Suburbs filled in from public listings so the geocoder lands the
+    # right place AND the row dedups against the same venue in other
+    # sources (Yeodongsik in Eastwood, Ibushi in Sydney CBD, etc.).
+    "Ibushi",                                         "Sydney CBD",             TRUE,
     "Infinity by Mark Best",                          "Sydney CBD",             TRUE,
     "Ito",                                            "Surry Hills",            FALSE,
     "Jane",                                           "Surry Hills",            FALSE,
@@ -152,7 +152,7 @@ gfg_awards_2026_records <- function() {
     "Neptune's Grotto",                               "Sydney CBD",             TRUE,
     "Nour",                                           "Surry Hills",            FALSE,
     "Olympus Dining",                                 "Redfern",                TRUE,
-    "Omakase by Prefecture 48",                       "Sydney",                 TRUE,
+    "Omakase by Prefecture 48",                       "Sydney CBD",             TRUE,
     "Osteria di Russo & Russo",                       "Enmore",                 FALSE,
     "Osteria Mucca",                                  "Newtown",                TRUE,
     "Otto Ristorante",                                "Woolloomooloo",          FALSE,
@@ -177,10 +177,10 @@ gfg_awards_2026_records <- function() {
     "Viand",                                          "Woolloomooloo",          FALSE,
     "Vin-Cenzo's",                                    "Darlinghurst",           TRUE,
     "Vineria Luisa",                                  "Enmore",                 TRUE,
-    "The White Horse",                                "Sydney",                 FALSE,
+    "The White Horse",                                "Surry Hills",            FALSE,
     "Woodcut",                                        "Barangaroo",             FALSE,
-    "Yan",                                            "Sydney",                 FALSE,
-    "Yeodongsik",                                     "Sydney",                 FALSE,
+    "Yan",                                            "Sydney CBD",             FALSE,
+    "Yeodongsik",                                     "Eastwood",               FALSE,
     # Regional and ACT
     "Ates",                                           "Blackheath",             FALSE,
     "Bangalay Dining",                                "Shoalhaven Heads",       FALSE,
