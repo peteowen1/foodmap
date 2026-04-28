@@ -29,7 +29,7 @@ scrape_infatuation <- function(city = "san-francisco",
   city <- validate_city_source(city, "infatuation")
   cli::cli_h1("Scraping The Infatuation: {city}")
 
-  guides <- c(infatuation_default_guide(city), extra_guides)
+  guides <- unique(c(infatuation_default_guides(city), extra_guides))
   cli::cli_alert_info("Fetching {length(guides)} guide{?s}")
 
   results <- purrr::map(guides, function(slug) {
@@ -58,12 +58,30 @@ scrape_infatuation <- function(city = "san-francisco",
 }
 
 
-#' Default flagship guide slug per city
+#' Default guide slugs per city
+#'
+#' For SF, hits the flagship restaurants list plus a handful of
+#' category-specific guides covering bars, brunch, coffee/cafes and a
+#' few cuisines so the combined output spans restaurants + bars +
+#' cafes. Failures (404s) for individual slugs are logged but don't
+#' abort the overall scrape.
 #' @noRd
-infatuation_default_guide <- function(city) {
+infatuation_default_guides <- function(city) {
   switch(city,
-    `san-francisco` = "restaurants-that-remind-us-why-we-love-sf",
-    cli::cli_abort("No default Infatuation guide for {.val {city}}")
+    `san-francisco` = c(
+      "restaurants-that-remind-us-why-we-love-sf",
+      "great-sf-restaurants-for-dining-solo",
+      "best-italian-restaurants-san-francisco",
+      "best-pizza-san-francisco",
+      "best-ramen-san-francisco",
+      "best-pho-sf",
+      "best-noodle-soup-san-francisco",
+      "the-best-pasta-in-san-francisco",
+      "best-croissants-sf",
+      "best-matcha-san-francisco",
+      "best-cha-chaan-teng-sf"
+    ),
+    cli::cli_abort("No default Infatuation guides for {.val {city}}")
   )
 }
 

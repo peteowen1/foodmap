@@ -73,7 +73,8 @@ CUISINE_NAMES <- c(
 #' @noRd
 valid_sources <- function() {
   c("broadsheet", "gourmet_traveller", "timeout", "urban_list", "agfg",
-    "good_food_guide", "gfg_awards", "concrete_playground", "infatuation")
+    "good_food_guide", "gfg_awards", "concrete_playground",
+    "infatuation", "eater")
 }
 
 #' Cities supported by a given source
@@ -90,6 +91,7 @@ supported_cities_for_source <- function(source) {
     gfg_awards          = "sydney",
     concrete_playground = c("sydney", "melbourne"),
     infatuation         = "san-francisco",
+    eater               = "san-francisco",
     cli::cli_abort("Unknown source: {.val {source}}")
   )
 }

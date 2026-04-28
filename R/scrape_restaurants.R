@@ -33,7 +33,8 @@ scrape_restaurants <- function(city = "sydney",
     good_food_guide   = scrape_good_food_guide(city, use_cache = use_cache),
     gfg_awards        = scrape_gfg_awards(city),
     concrete_playground = scrape_concrete_playground(city, use_cache = use_cache),
-    infatuation       = scrape_infatuation(city, use_cache = use_cache)
+    infatuation       = scrape_infatuation(city, use_cache = use_cache),
+    eater             = scrape_eater(city, use_cache = use_cache)
   )
 }
 

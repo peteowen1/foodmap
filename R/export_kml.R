@@ -12,6 +12,7 @@ source_style_id <- function(source) {
     gfg_awards        = "ffcc00cc",  # purple - SMH GFG annual hat awards
     concrete_playground = "ff66cc66", # light green - Concrete Playground
     infatuation       = "ff993366",  # plum - The Infatuation
+    eater             = "ff336699",  # navy - Eater
     multiple          = "ff00ffff"   # gold - venues in 2+ sources
   )
   # Use first source for combined strings like "broadsheet, timeout"
