@@ -157,16 +157,4 @@ cp_parse_card <- function(card) {
 }
 
 
-#' Decode common HTML entities encountered in JSON-LD payloads
-#' (Concrete Playground encodes apostrophes as &#039; etc.)
-#' @noRd
-decode_html_entities <- function(x) {
-  if (is.na(x)) return(x)
-  x |>
-    gsub("&#039;", "'",  x = _, fixed = TRUE) |>
-    gsub("&#39;",  "'",  x = _, fixed = TRUE) |>
-    gsub("&amp;",  "&",  x = _, fixed = TRUE) |>
-    gsub("&quot;", "\"", x = _, fixed = TRUE) |>
-    gsub("&lt;",   "<",  x = _, fixed = TRUE) |>
-    gsub("&gt;",   ">",  x = _, fixed = TRUE)
-}
+# decode_html_entities() lives in utils.R so other scrapers can reuse it.

@@ -8,7 +8,8 @@ geocode_restaurants(
   restaurants,
   api_key = NULL,
   cache_path = "cache/geocodes.csv",
-  force_refresh = FALSE
+  force_refresh = FALSE,
+  country = "AU"
 )
 }
 \arguments{
@@ -27,6 +28,13 @@ Pass \code{NULL} to disable caching entirely.}
 (so all rows missing coords get re-geocoded), but still write fresh
 results back to the cache. Useful when upstream data has changed and
 you suspect cached coordinates are stale. Default \code{FALSE}.}
+
+\item{country}{Two-letter ISO country code used to bias Places API
+results (\code{regionCode} + bounding box \code{locationBias}). Returned
+coordinates outside the country's bounding box are rejected. Set
+\code{NULL} for an unbiased global query. Default \code{"AU"} for back-compat
+with the original Sydney/Melbourne pipelines; pass \code{"US"}, \code{"GB"},
+etc. for other regions.}
 }
 \value{
 The input tibble with \code{latitude}, \code{longitude}, \code{formatted_address},

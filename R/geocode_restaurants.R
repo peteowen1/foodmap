@@ -16,6 +16,12 @@
 #'   (so all rows missing coords get re-geocoded), but still write fresh
 #'   results back to the cache. Useful when upstream data has changed and
 #'   you suspect cached coordinates are stale. Default `FALSE`.
+#' @param country Two-letter ISO country code used to bias Places API
+#'   results (`regionCode` + bounding box `locationBias`). Returned
+#'   coordinates outside the country's bounding box are rejected. Set
+#'   `NULL` for an unbiased global query. Default `"AU"` for back-compat
+#'   with the original Sydney/Melbourne pipelines; pass `"US"`, `"GB"`,
+#'   etc. for other regions.
 #'
 #' @return The input tibble with `latitude`, `longitude`, `formatted_address`,
 #'   and `place_id` columns populated.
@@ -23,13 +29,14 @@
 geocode_restaurants <- function(restaurants,
                                 api_key = NULL,
                                 cache_path = "cache/geocodes.csv",
-                                force_refresh = FALSE) {
+                                force_refresh = FALSE,
+                                country = "AU") {
 
   restaurants <- ensure_geocode_cols(restaurants)
 
   # Step 1 — fill in coordinates from the on-disk cache (unless overridden)
   if (!is.null(cache_path) && !force_refresh && file.exists(cache_path)) {
-    restaurants <- geocode_cache_apply(restaurants, cache_path)
+    restaurants <- geocode_cache_apply(restaurants, cache_path, country)
   }
 
   needs_geocoding <- is.na(restaurants$latitude) | is.na(restaurants$longitude)
@@ -52,7 +59,7 @@ geocode_restaurants <- function(restaurants,
     row <- restaurants[i, ]
     query <- build_geocode_query(row$name, row$suburb, row$address)
 
-    result <- places_text_search(query, api_key)
+    result <- places_text_search(query, api_key, country = country)
 
     if (!is.null(result)) {
       restaurants$latitude[i]          <- result$lat
@@ -82,7 +89,7 @@ geocode_restaurants <- function(restaurants,
 
 #' Read a geocode cache CSV and fill matching coords into a restaurants tibble
 #' @noRd
-geocode_cache_apply <- function(restaurants, cache_path) {
+geocode_cache_apply <- function(restaurants, cache_path, country = NULL) {
   cached <- tryCatch(
     utils::read.csv(cache_path, stringsAsFactors = FALSE,
                     na.strings = c("", "NA")),
@@ -106,20 +113,23 @@ geocode_cache_apply <- function(restaurants, cache_path) {
     unmatched = "ignore"
   )
 
-  # Self-heal: any cached coords that fall outside Australia get cleared
-  # so they'll be re-geocoded with the AU-biased query
-  bad <- !is.na(restaurants$latitude) &
-    !is_in_australia(restaurants$latitude, restaurants$longitude)
-  if (any(bad)) {
-    cli::cli_warn(
-      "{sum(bad)} cached coord{?s} fell outside Australia and will be re-geocoded"
-    )
-    restaurants$latitude[bad] <- NA_real_
-    restaurants$longitude[bad] <- NA_real_
-    if ("formatted_address" %in% names(restaurants))
-      restaurants$formatted_address[bad] <- NA_character_
-    if ("place_id" %in% names(restaurants))
-      restaurants$place_id[bad] <- NA_character_
+  # Self-heal: any cached coords that fall outside the target country's
+  # bounding box get cleared so they'll be re-geocoded with the right
+  # regional bias. Skipped when country is NULL (no bias was applied).
+  if (!is.null(country) && !is.na(country)) {
+    bad <- !is.na(restaurants$latitude) &
+      !is_in_country(restaurants$latitude, restaurants$longitude, country)
+    if (any(bad)) {
+      cli::cli_warn(
+        "{sum(bad)} cached coord{?s} fell outside {country} and will be re-geocoded"
+      )
+      restaurants$latitude[bad] <- NA_real_
+      restaurants$longitude[bad] <- NA_real_
+      if ("formatted_address" %in% names(restaurants))
+        restaurants$formatted_address[bad] <- NA_character_
+      if ("place_id" %in% names(restaurants))
+        restaurants$place_id[bad] <- NA_character_
+    }
   }
 
   reused <- sum(!is.na(restaurants$latitude)) - before
@@ -189,37 +199,29 @@ build_geocode_query <- function(name, suburb, address = NA_character_) {
   paste(parts, collapse = " ")
 }
 
-#' Approximate bounding box of mainland Australia + Tasmania, used to
-#' validate cached/returned coordinates and bias Places API queries
-#' @noRd
-AU_BBOX <- list(lat = c(-44, -10), lng = c(112, 154))
-
-#' Are these coordinates inside the Australia bounding box?
-#' @noRd
-is_in_australia <- function(lat, lng) {
-  !is.na(lat) & !is.na(lng) &
-    lat >= AU_BBOX$lat[1] & lat <= AU_BBOX$lat[2] &
-    lng >= AU_BBOX$lng[1] & lng <= AU_BBOX$lng[2]
-}
-
 #' Call Google Places API (New) Text Search
 #'
-#' Biases results to Australian places via `regionCode = "AU"` and a
-#' `locationBias` rectangle covering Australia. Falls back to the global
-#' result if no AU-specific match exists.
+#' Biases results to the requested country (regionCode + locationBias
+#' rectangle covering the country's bbox). When `country` is `NULL`,
+#' falls back to a globally-unbiased query. After the API responds,
+#' walks the returned places and rejects anything outside the country's
+#' bbox so a strongly-matched foreign place can't slip through the
+#' soft `regionCode` bias.
 #' @noRd
-places_text_search <- function(query, api_key) {
+places_text_search <- function(query, api_key, country = "AU") {
 
-  body <- list(
-    textQuery   = query,
-    regionCode  = "AU",
-    locationBias = list(
+  body <- list(textQuery = query)
+  rcode <- country_region_code(country)
+  bbox  <- country_bbox(country)
+  if (!is.null(rcode)) body$regionCode <- rcode
+  if (!is.null(bbox)) {
+    body$locationBias <- list(
       rectangle = list(
-        low  = list(latitude = AU_BBOX$lat[1], longitude = AU_BBOX$lng[1]),
-        high = list(latitude = AU_BBOX$lat[2], longitude = AU_BBOX$lng[2])
+        low  = list(latitude = bbox$lat[1], longitude = bbox$lng[1]),
+        high = list(latitude = bbox$lat[2], longitude = bbox$lng[2])
       )
     )
-  )
+  }
 
   resp <- tryCatch(
     httr2::request("https://places.googleapis.com/v1/places:searchText") |>
@@ -247,12 +249,13 @@ places_text_search <- function(query, api_key) {
     return(NULL)
   }
 
-  # Reject any non-AU results that slipped through (region bias is a
-  # preference, not a hard restriction)
+  # Reject any results outside the target country's bbox (region bias
+  # is a preference, not a hard restriction). When country is NULL,
+  # is_in_country returns TRUE for everything so the first hit wins.
   for (p in places) {
     lat <- p$location$latitude
     lng <- p$location$longitude
-    if (is_in_australia(lat, lng)) {
+    if (isTRUE(is_in_country(lat, lng, country))) {
       return(list(
         lat      = lat,
         lng      = lng,
@@ -262,6 +265,6 @@ places_text_search <- function(query, api_key) {
     }
   }
 
-  cli::cli_warn("No Australian results for {.val {query}}")
+  cli::cli_warn("No {country %||% 'matching'} results for {.val {query}}")
   NULL
 }

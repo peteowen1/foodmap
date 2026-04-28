@@ -9,9 +9,10 @@ source_style_id <- function(source) {
     urban_list        = "ffff00ff",  # magenta
     agfg              = "ff00ccff",  # yellow
     good_food_guide   = "ff0088ff",  # dark orange
-    gfg_awards        = "ffcc00cc",  # purple — SMH GFG annual hat awards
-    concrete_playground = "ff66cc66", # light green — Concrete Playground
-    multiple          = "ff00ffff"   # gold — venues in 2+ sources
+    gfg_awards        = "ffcc00cc",  # purple - SMH GFG annual hat awards
+    concrete_playground = "ff66cc66", # light green - Concrete Playground
+    infatuation       = "ff993366",  # plum - The Infatuation
+    multiple          = "ff00ffff"   # gold - venues in 2+ sources
   )
   # Use first source for combined strings like "broadsheet, timeout"
   primary <- stringr::str_split(source, ",\\s*")[[1]][1]
