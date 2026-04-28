@@ -39,13 +39,17 @@ harmonize_sources <- function(data) {
         .data$rating, .data$rating_scale, .data$hats, .data$source
       )
     ) |>
-    # Select final columns in a useful order
+    # Select final columns in a useful order. `n_sources` is added by
+    # deduplicate_restaurants() and is preserved here so downstream
+    # consumers (export_html() in particular) can classify venues by
+    # cross-guide overlap.
     dplyr::select(
       "name", "suburb", "address", "cuisine", "category", "source",
       "description", "url", "latitude", "longitude",
       "price_range", "price_label", "cost_bracket",
       "rating", "rating_scale", "rating_label",
-      "hats", "review_date"
+      "hats", "review_date",
+      dplyr::any_of("n_sources")
     )
 }
 

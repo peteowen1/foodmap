@@ -4,11 +4,18 @@
 #' viewing on a phone. Pins are colour-coded by hat tier (when present)
 #' or by source-overlap count, with marker clustering for performance and
 #' rich popups including rating, cuisine, price, source list, and a
-#' truncated description. Suitable for hosting on GitHub Pages or any
-#' static host.
+#' truncated description. A custom filter panel in the top-right lets
+#' the viewer:
 #'
-#' Requires the `leaflet`, `htmlwidgets` and `htmltools` packages
-#' (Suggests).
+#' - Toggle each tier (3 hats / 2 hats / etc.) on or off
+#' - Pick one or more guides (Broadsheet, Time Out, AGFG, ...) and
+#'   choose whether the venue must appear in **any** selected guide
+#'   (union) or **all** of them (intersection)
+#'
+#' Suitable for hosting on GitHub Pages or any static host.
+#'
+#' Requires the `leaflet`, `htmlwidgets`, `htmltools` and `jsonlite`
+#' packages (Suggests).
 #'
 #' @param restaurants A tibble as returned by [geocode_restaurants()],
 #'   typically after [harmonize_sources()] (which adds `rating_label`
@@ -26,6 +33,7 @@ export_html <- function(restaurants,
   rlang::check_installed("leaflet", reason = "for HTML map output")
   rlang::check_installed("htmlwidgets", reason = "for HTML map output")
   rlang::check_installed("htmltools", reason = "for HTML map output")
+  rlang::check_installed("jsonlite", reason = "for HTML map output")
 
   has_coords <- !is.na(restaurants$latitude) & !is.na(restaurants$longitude)
   n_skip <- sum(!has_coords)
@@ -38,16 +46,22 @@ export_html <- function(restaurants,
     cli::cli_abort("No venues with coordinates to export.")
   }
 
-  # Add rating/price/cost labels if missing (only works when source column present)
   if (!"rating_label" %in% names(geo) && "source" %in% names(geo)) {
     geo <- harmonize_sources(geo)
   }
 
-  # Pin colour + tier label, both derived from the same case_when so the
-  # legend and the layer-control checkboxes stay in sync. Hats win when
-  # present; otherwise classify by source-overlap count.
+  # Tier classification feeds both pin colour and the legend.
+  # If n_sources isn't already on the data (e.g. loaded from an older
+  # CSV that pre-dates harmonize_sources keeping it), derive it from
+  # the source column.
   hats_col <- if ("hats" %in% names(geo)) geo$hats else NA_integer_
-  ns_col   <- if ("n_sources" %in% names(geo)) geo$n_sources else rep(1L, nrow(geo))
+  ns_col   <- if ("n_sources" %in% names(geo)) {
+    geo$n_sources
+  } else if ("source" %in% names(geo)) {
+    vapply(strsplit(geo$source, ",\\s*"), length, integer(1))
+  } else {
+    rep(1L, nrow(geo))
+  }
   geo$tier <- dplyr::case_when(
     !is.na(hats_col) & hats_col >= 3 ~ "3 hats",
     !is.na(hats_col) & hats_col == 2 ~ "2 hats",
@@ -67,10 +81,34 @@ export_html <- function(restaurants,
     geo$tier == "single guide"  ~ "blue"
   )
 
+  # Source list per venue, normalised to a vector for JS-side comparisons
+  sources_split <- if ("source" %in% names(geo)) {
+    lapply(strsplit(geo$source, ",\\s*"), function(x) x[!is.na(x) & nzchar(x)])
+  } else {
+    rep(list(character()), nrow(geo))
+  }
+  all_sources <- sort(unique(unlist(sources_split)))
+
   geo$popup_html <- vapply(seq_len(nrow(geo)),
                            build_popup_html,
                            character(1),
                            geo = geo)
+
+  # Marker payload for JS — kept lean (popup HTML is the heaviest field)
+  marker_records <- lapply(seq_len(nrow(geo)), function(i) {
+    list(
+      id      = paste0("v", i),
+      lat     = geo$latitude[i],
+      lng     = geo$longitude[i],
+      name    = geo$name[i],
+      popup   = geo$popup_html[i],
+      color   = geo$pin_color[i],
+      tier    = geo$tier[i],
+      sources = sources_split[[i]]
+    )
+  })
+  marker_json <- jsonlite::toJSON(marker_records, auto_unbox = TRUE,
+                                  null = "null", na = "null")
 
   bbox <- list(
     lng_min = min(geo$longitude, na.rm = TRUE),
@@ -79,8 +117,6 @@ export_html <- function(restaurants,
     lat_max = max(geo$latitude,  na.rm = TRUE)
   )
 
-  # Order tiers from "best" to "long tail" so the layer control reads
-  # naturally. Only include tiers that actually appear in the data.
   tier_order <- c("3 hats", "2 hats", "1 hat",
                   "5+ guides", "3-4 guides", "2 guides", "single guide")
   tier_order <- tier_order[tier_order %in% unique(geo$tier)]
@@ -90,40 +126,13 @@ export_html <- function(restaurants,
     leaflet::fitBounds(
       lng1 = bbox$lng_min, lat1 = bbox$lat_min,
       lng2 = bbox$lng_max, lat2 = bbox$lat_max
-    )
-
-  # Add one cluster per tier so the layers control can independently
-  # toggle each — flipping off "single guide" instantly thins out the
-  # central Sydney cluster from 395 to ~100.
-  for (tier_name in tier_order) {
-    subset_geo <- geo[geo$tier == tier_name, , drop = FALSE]
-    m <- m |> leaflet::addAwesomeMarkers(
-      data        = subset_geo,
-      lng         = ~longitude,
-      lat         = ~latitude,
-      popup       = ~popup_html,
-      label       = ~name,
-      group       = tier_name,
-      icon        = leaflet::awesomeIcons(
-        icon         = "cutlery",
-        library      = "fa",
-        markerColor  = ~pin_color,
-        iconColor    = "white"
-      ),
-      clusterOptions = leaflet::markerClusterOptions(maxClusterRadius = 40)
-    )
-  }
-
-  m <- m |>
-    leaflet::addLayersControl(
-      overlayGroups = tier_order,
-      options       = leaflet::layersControlOptions(collapsed = FALSE),
-      position      = "topright"
     ) |>
     leaflet::addControl(
-      html     = export_html_legend(tier_order),
-      position = "bottomright"
-    )
+      html     = filter_panel_html(tier_order, all_sources),
+      position = "topright",
+      className = "foodmap-filter-control"
+    ) |>
+    htmlwidgets::onRender(filter_js(marker_json))
 
   output_path <- normalizePath(output_path, mustWork = FALSE, winslash = "/")
   out_dir <- dirname(output_path)
@@ -182,30 +191,144 @@ build_popup_html <- function(i, geo) {
 }
 
 
-#' Inline legend HTML, shown bottom-right of the map
-#'
-#' Only renders rows for tiers actually present in the data so a Melbourne
-#' map (no SMH GFG awards source, hence rare 3 hat tier) doesn't show
-#' phantom legend entries.
+#' Build the filter-panel HTML — tier checkboxes, source checkboxes,
+#' AND/OR mode radio, plus the colour legend.
 #' @noRd
-export_html_legend <- function(tier_order) {
-  swatch <- list(
-    "3 hats"       = "\U0001F7E3 3 hats",
-    "2 hats"       = "\U0001F7E2 2 hats",
-    "1 hat"        = "\U0001F338 1 hat",
-    "5+ guides"    = "\U0001F534 5+ guides",
-    "3-4 guides"   = "\U0001F7E5 3-4 guides",
-    "2 guides"     = "\U0001F7E0 2 guides",
-    "single guide" = "\U0001F535 single guide"
+filter_panel_html <- function(tier_order, all_sources) {
+  esc <- htmltools::htmlEscape
+
+  tier_swatch <- list(
+    "3 hats"       = "\U0001F7E3",
+    "2 hats"       = "\U0001F7E2",
+    "1 hat"        = "\U0001F338",
+    "5+ guides"    = "\U0001F534",
+    "3-4 guides"   = "\U0001F7E5",
+    "2 guides"     = "\U0001F7E0",
+    "single guide" = "\U0001F535"
   )
-  rows <- vapply(tier_order, function(t) swatch[[t]] %||% t, character(1))
+  tier_rows <- vapply(tier_order, function(t) {
+    sprintf(
+      paste0("<label style='display:block;cursor:pointer;'>",
+             "<input type='checkbox' class='fm-tier' value='%s' checked> ",
+             "%s %s</label>"),
+      esc(t), tier_swatch[[t]] %||% "", esc(t)
+    )
+  }, character(1))
+
+  source_rows <- vapply(all_sources, function(s) {
+    sprintf(
+      paste0("<label style='display:block;cursor:pointer;'>",
+             "<input type='checkbox' class='fm-source' value='%s' checked> ",
+             "%s</label>"),
+      esc(s), esc(s)
+    )
+  }, character(1))
+
   paste0(
-    "<div style='background:rgba(255,255,255,0.92);padding:8px 10px;",
-    "border-radius:6px;font-family:sans-serif;font-size:12px;",
-    "box-shadow:0 1px 4px rgba(0,0,0,0.15);line-height:1.5;",
-    "max-width:170px'>",
-    "<b>Pin colour</b><br>",
-    paste(rows, collapse = "<br>"),
+    "<div class='foodmap-filter' style='background:rgba(255,255,255,0.96);",
+    "padding:10px 12px;border-radius:8px;font-family:sans-serif;font-size:12px;",
+    "box-shadow:0 1px 6px rgba(0,0,0,0.18);max-width:220px;line-height:1.55'>",
+    # Tier section
+    "<div style='font-weight:600;margin-bottom:4px'>Tier</div>",
+    paste(tier_rows, collapse = ""),
+    # Source section
+    "<div style='font-weight:600;margin-top:10px;margin-bottom:4px'>Guide</div>",
+    paste(source_rows, collapse = ""),
+    # Mode section
+    "<div style='font-weight:600;margin-top:10px;margin-bottom:4px'>Match</div>",
+    "<label style='cursor:pointer;margin-right:10px'>",
+    "<input type='radio' name='fm-mode' value='or' checked> any</label>",
+    "<label style='cursor:pointer'>",
+    "<input type='radio' name='fm-mode' value='and'> all</label>",
+    # Counter
+    "<div id='fm-count' style='margin-top:10px;color:#666;font-size:11px'></div>",
     "</div>"
   )
+}
+
+
+#' JS injected post-render to:
+#'   - parse the embedded marker JSON
+#'   - build a single MarkerClusterGroup
+#'   - wire filter checkboxes/radios to a re-render handler
+#' @noRd
+filter_js <- function(marker_json) {
+  paste0("
+function(el, x) {
+  var map = this;
+  var markerData = ", marker_json, ";
+
+  // Build all marker objects up front; we'll add/remove them from the
+  // cluster as filters change rather than recreating each time.
+  var allMarkers = markerData.map(function(d) {
+    var icon = L.AwesomeMarkers.icon({
+      icon: 'cutlery', prefix: 'fa',
+      markerColor: d.color, iconColor: 'white'
+    });
+    var marker = L.marker([d.lat, d.lng], { icon: icon, title: d.name });
+    marker.bindPopup(d.popup);
+    marker._fmTier    = d.tier;
+    marker._fmSources = d.sources || [];
+    return marker;
+  });
+
+  var cluster = L.markerClusterGroup({ maxClusterRadius: 40 });
+  map.addLayer(cluster);
+
+  function getChecked(selector) {
+    return Array.prototype.map.call(
+      document.querySelectorAll(selector + ':checked'),
+      function(el) { return el.value; }
+    );
+  }
+  function getMode() {
+    var r = document.querySelector('input[name=fm-mode]:checked');
+    return r ? r.value : 'or';
+  }
+
+  function applyFilter() {
+    var tiers   = getChecked('.fm-tier');
+    var sources = getChecked('.fm-source');
+    var mode    = getMode();
+    var tierSet = {};
+    tiers.forEach(function(t) { tierSet[t] = true; });
+    var sourceSet = {};
+    sources.forEach(function(s) { sourceSet[s] = true; });
+
+    var visible = allMarkers.filter(function(m) {
+      if (!tierSet[m._fmTier]) return false;
+      if (sources.length === 0) return false;
+      if (mode === 'and') {
+        return sources.every(function(s) {
+          return m._fmSources.indexOf(s) !== -1;
+        });
+      }
+      return m._fmSources.some(function(s) { return sourceSet[s]; });
+    });
+
+    cluster.clearLayers();
+    cluster.addLayers(visible);
+
+    var counter = document.getElementById('fm-count');
+    if (counter) {
+      counter.textContent = visible.length + ' / ' + allMarkers.length + ' venues shown';
+    }
+  }
+
+  // Wire up listeners — every checkbox/radio re-applies the filter
+  document.querySelectorAll('.fm-tier, .fm-source, input[name=fm-mode]').forEach(function(input) {
+    input.addEventListener('change', applyFilter);
+  });
+
+  // Stop the filter panel from forwarding map drags / scrolls so the
+  // checkboxes feel native rather than panning the map underneath
+  var panel = document.querySelector('.foodmap-filter');
+  if (panel) {
+    L.DomEvent.disableClickPropagation(panel);
+    L.DomEvent.disableScrollPropagation(panel);
+  }
+
+  applyFilter();
+}
+")
 }
