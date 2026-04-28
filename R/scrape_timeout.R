@@ -87,8 +87,9 @@ timeout_url <- function(city) {
   # Sydney/Melbourne use "the-best-restaurants-in-{city}"
   # Brisbane/Adelaide use "best-restaurants-in-{city}"
   urls <- c(
-    sydney    = "https://www.timeout.com/sydney/restaurants/the-best-restaurants-in-sydney",
-    melbourne = "https://www.timeout.com/melbourne/restaurants/the-best-restaurants-in-melbourne"
+    sydney          = "https://www.timeout.com/sydney/restaurants/the-best-restaurants-in-sydney",
+    melbourne       = "https://www.timeout.com/melbourne/restaurants/the-best-restaurants-in-melbourne",
+    `san-francisco` = "https://www.timeout.com/san-francisco/restaurants/the-best-restaurants-in-san-francisco"
   )
   urls[[city]]
 }
@@ -96,9 +97,11 @@ timeout_url <- function(city) {
 #' Parse a single Time Out restaurant card
 #' @noRd
 timeout_parse_card <- function(card, city) {
-  # Name from h3
+  # Name from h3. Strip leading rank prefix (Time Out SF formats their
+  # tiles as "1. Copra", "2. 7 Adams" etc.; Sydney/Melbourne don't).
   name <- rvest::html_element(card, "h3") |>
-    rvest::html_text2()
+    rvest::html_text2() |>
+    stringr::str_remove("^\\s*\\d+\\.\\s*")
 
   # URL from tile link
   href <- rvest::html_element(card, "a[data-testid='tile-link_testID']") |>
