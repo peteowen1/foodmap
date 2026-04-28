@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>foodmap — Australia's best restaurants, mapped</title>
+  <style>
+    :root {
+      --bg: #faf7f2;
+      --ink: #1c1c1c;
+      --muted: #6b6b6b;
+      --accent: #c0392b;
+      --card: #ffffff;
+      --border: #e9e4dc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.5;
+    }
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 24px 64px;
+    }
+    h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+    }
+    .lede {
+      color: var(--muted);
+      font-size: 1.05rem;
+      margin: 0 0 36px;
+    }
+    .cards {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 540px) {
+      .cards { grid-template-columns: 1fr 1fr; }
+    }
+    .card {
+      display: block;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      text-decoration: none;
+      color: inherit;
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+      border-color: var(--accent);
+    }
+    .card h2 {
+      margin: 0 0 4px;
+      font-size: 1.4rem;
+      letter-spacing: -0.01em;
+    }
+    .card .meta { color: var(--muted); font-size: 0.95rem; }
+    footer {
+      margin-top: 48px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>foodmap</h1>
+    <p class="lede">
+      Every hatted, awarded and recommended restaurant in Australia, pulled from
+      seven food guides and mapped in one place.
+    </p>
+
+    <div class="cards">
+      <a class="card" href="sydney.html">
+        <h2>Sydney →</h2>
+        <p class="meta">Broadsheet · Gourmet Traveller · Time Out · Urban List · AGFG · GFG · GFG Awards 2026</p>
+      </a>
+      <a class="card" href="melbourne.html">
+        <h2>Melbourne →</h2>
+        <p class="meta">Broadsheet · Gourmet Traveller · Time Out · Urban List · AGFG · GFG</p>
+      </a>
+    </div>
+
+    <footer>
+      Built with <a href="https://github.com/peteowen1/foodmap">foodmap</a>,
+      an R package that scrapes restaurant guides, geocodes via Google Places,
+      and renders the result as a Leaflet map.
+    </footer>
+  </main>
+</body>
+</html>

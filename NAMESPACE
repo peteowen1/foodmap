@@ -3,6 +3,7 @@
 export(create_food_map)
 export(deduplicate_restaurants)
 export(export_csv)
+export(export_html)
 export(export_kml)
 export(geocode_restaurants)
 export(harmonize_sources)
