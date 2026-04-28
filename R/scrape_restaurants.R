@@ -35,7 +35,9 @@ scrape_restaurants <- function(city = "sydney",
     concrete_playground = scrape_concrete_playground(city, use_cache = use_cache),
     infatuation       = scrape_infatuation(city, use_cache = use_cache),
     eater             = scrape_eater(city, use_cache = use_cache),
-    `7x7`             = scrape_7x7(city, use_cache = use_cache)
+    `7x7`             = scrape_7x7(city, use_cache = use_cache),
+    cn_traveler       = scrape_cn_traveler(city, use_cache = use_cache),
+    james_beard       = scrape_james_beard(city)
   )
 }
 

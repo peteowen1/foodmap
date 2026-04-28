@@ -14,6 +14,8 @@ source_style_id <- function(source) {
     infatuation       = "ff993366",  # plum - The Infatuation
     eater             = "ff336699",  # navy - Eater
     `7x7`             = "ff66ffff",  # cyan - 7x7
+    cn_traveler       = "ff663366",  # dark plum - Conde Nast Traveler
+    james_beard       = "ff003366",  # deep navy - James Beard Awards
     multiple          = "ff00ffff"   # gold - venues in 2+ sources
   )
   # Use first source for combined strings like "broadsheet, timeout"
