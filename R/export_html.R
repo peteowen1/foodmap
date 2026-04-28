@@ -97,17 +97,18 @@ export_html <- function(restaurants,
   # Marker payload for JS — kept lean (popup HTML is the heaviest field)
   marker_records <- lapply(seq_len(nrow(geo)), function(i) {
     list(
-      id      = paste0("v", i),
-      lat     = geo$latitude[i],
-      lng     = geo$longitude[i],
-      name    = geo$name[i],
-      popup   = geo$popup_html[i],
-      color   = geo$pin_color[i],
-      tier    = geo$tier[i],
+      id        = paste0("v", i),
+      lat       = geo$latitude[i],
+      lng       = geo$longitude[i],
+      name      = geo$name[i],
+      popup     = geo$popup_html[i],
+      color     = geo$pin_color[i],
+      tier      = geo$tier[i],
+      n_sources = length(sources_split[[i]]),
       # I() prevents jsonlite::toJSON(auto_unbox = TRUE) from collapsing
       # a length-1 character vector into a bare string (which would
       # break .some()/.every() on the JS side)
-      sources = I(sources_split[[i]])
+      sources   = I(sources_split[[i]])
     )
   })
   marker_json <- jsonlite::toJSON(marker_records, auto_unbox = TRUE,
@@ -213,7 +214,8 @@ build_popup_html <- function(i, geo) {
 
 
 #' Build the filter-panel HTML — tier checkboxes, source checkboxes,
-#' AND/OR mode radio, plus the colour legend.
+#' AND/OR mode radio, min-guides select, all/none toggles, plus the
+#' colour legend.
 #' @noRd
 filter_panel_html <- function(tier_order, all_sources) {
   esc <- htmltools::htmlEscape
@@ -245,18 +247,48 @@ filter_panel_html <- function(tier_order, all_sources) {
     )
   }, character(1))
 
+  # Mini "All / None" toggle for a checkbox group, identified via target
+  # CSS class. Tiny inline buttons to keep the panel compact.
+  toggle_btns <- function(target_class) {
+    btn_style <- paste0(
+      "border:1px solid #ccc;background:#f7f7f7;color:#333;",
+      "border-radius:4px;padding:1px 6px;font-size:10px;cursor:pointer;",
+      "margin-left:4px;font-family:inherit"
+    )
+    sprintf(
+      paste0("<button type='button' class='fm-toggle' data-target='%s' ",
+             "data-value='1' style='%s'>all</button>",
+             "<button type='button' class='fm-toggle' data-target='%s' ",
+             "data-value='0' style='%s'>none</button>"),
+      target_class, btn_style, target_class, btn_style
+    )
+  }
+
+  # Min-guides select: 1 = "any", 2..N = "≥N guides"
+  min_options <- vapply(seq_len(7), function(n) {
+    sel <- if (n == 1) " selected" else ""
+    label <- if (n == 1) "any" else paste0("≥ ", n)
+    sprintf("<option value='%d'%s>%s</option>", n, sel, label)
+  }, character(1))
+
   paste0(
     "<div class='foodmap-filter' style='background:rgba(255,255,255,0.96);",
     "padding:10px 12px;border-radius:8px;font-family:sans-serif;font-size:12px;",
-    "box-shadow:0 1px 6px rgba(0,0,0,0.18);max-width:220px;line-height:1.55'>",
-    # Tier section
-    "<div style='font-weight:600;margin-bottom:4px'>Tier</div>",
+    "box-shadow:0 1px 6px rgba(0,0,0,0.18);max-width:240px;line-height:1.55'>",
+    # Tier section with all/none toggles
+    "<div style='font-weight:600;margin-bottom:4px'>",
+    "Tier", toggle_btns("fm-tier"), "</div>",
     paste(tier_rows, collapse = ""),
-    # Source section
-    "<div style='font-weight:600;margin-top:10px;margin-bottom:4px'>Guide</div>",
+    # Source section with all/none toggles
+    "<div style='font-weight:600;margin-top:10px;margin-bottom:4px'>",
+    "Guide", toggle_btns("fm-source"), "</div>",
     paste(source_rows, collapse = ""),
-    # Mode section
-    "<div style='font-weight:600;margin-top:10px;margin-bottom:4px'>Match</div>",
+    # Min-guides + match-mode on one row
+    "<div style='font-weight:600;margin-top:10px;margin-bottom:4px'>Min guides</div>",
+    "<select id='fm-min-sources' style='font-family:inherit;font-size:12px'>",
+    paste(min_options, collapse = ""),
+    "</select>",
+    "<div style='font-weight:600;margin-top:10px;margin-bottom:4px'>Match guides</div>",
     "<label style='cursor:pointer;margin-right:10px'>",
     "<input type='radio' name='fm-mode' value='or' checked> any</label>",
     "<label style='cursor:pointer'>",
@@ -318,6 +350,7 @@ function(el, x) {
     if (typeof src === 'string') src = [src];
     if (!src) src = [];
     marker._fmSources = src;
+    marker._fmNumSources = (typeof d.n_sources === 'number') ? d.n_sources : src.length;
     return marker;
   });
 
@@ -334,11 +367,16 @@ function(el, x) {
     var r = document.querySelector('input[name=fm-mode]:checked');
     return r ? r.value : 'or';
   }
+  function getMinSources() {
+    var sel = document.getElementById('fm-min-sources');
+    return sel ? parseInt(sel.value, 10) || 1 : 1;
+  }
 
   function applyFilter() {
     var tiers   = getChecked('.fm-tier');
     var sources = getChecked('.fm-source');
     var mode    = getMode();
+    var minN    = getMinSources();
     var tierSet = {};
     tiers.forEach(function(t) { tierSet[t] = true; });
     var sourceSet = {};
@@ -346,6 +384,7 @@ function(el, x) {
 
     var visible = allMarkers.filter(function(m) {
       if (!tierSet[m._fmTier]) return false;
+      if (m._fmNumSources < minN) return false;
       if (sources.length === 0) return false;
       if (mode === 'and') {
         return sources.every(function(s) {
@@ -364,9 +403,22 @@ function(el, x) {
     }
   }
 
-  // Wire up listeners — every checkbox/radio re-applies the filter
+  // Wire up listeners — every checkbox/radio/select re-applies the filter
   document.querySelectorAll('.fm-tier, .fm-source, input[name=fm-mode]').forEach(function(input) {
     input.addEventListener('change', applyFilter);
+  });
+  var minSel = document.getElementById('fm-min-sources');
+  if (minSel) minSel.addEventListener('change', applyFilter);
+
+  // All/none toggle buttons set every checkbox in the named group at once
+  document.querySelectorAll('.fm-toggle').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      var cls = btn.getAttribute('data-target');
+      var on  = btn.getAttribute('data-value') === '1';
+      document.querySelectorAll('.' + cls).forEach(function(cb) { cb.checked = on; });
+      applyFilter();
+    });
   });
 
   // Stop the filter panel from forwarding map drags / scrolls so the
