@@ -30,7 +30,7 @@ scrape_restaurants <- function(city = "sydney",
     timeout           = scrape_timeout(city, use_cache = use_cache),
     urban_list        = scrape_urban_list(city, use_cache = use_cache),
     agfg              = scrape_agfg(city, use_cache = use_cache),
-    good_food_guide   = scrape_good_food_guide(city),
+    good_food_guide   = scrape_good_food_guide(city, use_cache = use_cache),
     gfg_awards        = scrape_gfg_awards(city)
   )
 }

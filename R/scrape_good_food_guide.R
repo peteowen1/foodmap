@@ -6,12 +6,15 @@
 #' score (/20 with .5 precision), cuisine, price, address, and suburb.
 #'
 #' @param city Character. One of "sydney", "melbourne". Default `"sydney"`.
+#' @param use_cache Logical. If `TRUE`, cache the per-review detail pages
+#'   locally to avoid re-fetching on every run. The chromote-driven listing
+#'   page is not cached (it dynamically expands all reviews). Default `FALSE`.
 #'
 #' @return A tibble with columns: name, suburb, address, cuisine, category,
 #'   description, price_range, cost_range, rating, rating_scale, hats,
 #'   review_date, phone, website, latitude, longitude, url.
 #' @export
-scrape_good_food_guide <- function(city = "sydney") {
+scrape_good_food_guide <- function(city = "sydney", use_cache = FALSE) {
   city <- validate_city_source(city, "good_food_guide")
   rlang::check_installed("chromote", reason = "for Good Food Guide scraping")
   cli::cli_h1("Scraping Good Food Guide: {city}")
@@ -41,7 +44,7 @@ scrape_good_food_guide <- function(city = "sydney") {
   raw_results <- purrr::imap(links, function(url, idx) {
     if (idx %% 20 == 0) cli::cli_alert_info("  ...{idx}/{n_links}")
     Sys.sleep(RATE_LIMIT_SECS)
-    tryCatch(gfg_fetch_detail(url), error = function(e) NULL)
+    tryCatch(gfg_fetch_detail(url, use_cache = use_cache), error = function(e) NULL)
   })
   n_failed <- sum(purrr::map_lgl(raw_results, is.null))
   if (n_failed > 0) {
@@ -203,17 +206,14 @@ gfg_reviews_url <- function(city) {
 #' Extracts venue name, score, cuisine, price, address, and suburb from
 #' JSON-LD keywords and page text.
 #' @noRd
-gfg_fetch_detail <- function(url) {
-  resp <- tryCatch(
-    httr2::request(url) |>
-      httr2::req_headers(`User-Agent` = user_agent_string()) |>
-      httr2::req_retry(max_tries = 2) |>
-      httr2::req_perform(),
+gfg_fetch_detail <- function(url, use_cache = FALSE) {
+  html_str <- tryCatch(
+    cached_fetch(url, use_cache = use_cache),
     error = function(e) NULL
   )
-  if (is.null(resp)) return(NULL)
+  if (is.null(html_str)) return(NULL)
 
-  page <- httr2::resp_body_string(resp) |> rvest::read_html()
+  page <- rvest::read_html(html_str)
   page_text <- rvest::html_text2(page)
 
   # Extract JSON-LD

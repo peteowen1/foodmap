@@ -4,10 +4,14 @@
 \alias{scrape_good_food_guide}
 \title{Scrape SMH/Age Good Food Guide reviews}
 \usage{
-scrape_good_food_guide(city = "sydney")
+scrape_good_food_guide(city = "sydney", use_cache = FALSE)
 }
 \arguments{
 \item{city}{Character. One of "sydney", "melbourne". Default \code{"sydney"}.}
+
+\item{use_cache}{Logical. If \code{TRUE}, cache the per-review detail pages
+locally to avoid re-fetching on every run. The chromote-driven listing
+page is not cached (it dynamically expands all reviews). Default \code{FALSE}.}
 }
 \value{
 A tibble with columns: name, suburb, address, cuisine, category,
