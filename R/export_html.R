@@ -137,6 +137,24 @@ export_html <- function(restaurants,
     ) |>
     htmlwidgets::onRender(filter_js(marker_json))
 
+  # The custom onRender JS uses L.markerClusterGroup for clustering, but
+  # leaflet R only injects that library when addMarkers(clusterOptions=)
+  # is called from R. Attach the dep manually so the JS is loaded.
+  cluster_src <- system.file(
+    "htmlwidgets/plugins/Leaflet.markercluster", package = "leaflet"
+  )
+  if (nzchar(cluster_src)) {
+    m$dependencies <- c(m$dependencies, list(
+      htmltools::htmlDependency(
+        name       = "leaflet-markercluster",
+        version    = "1.0.5",
+        src        = cluster_src,
+        script     = "leaflet.markercluster.js",
+        stylesheet = c("MarkerCluster.css", "MarkerCluster.Default.css")
+      )
+    ))
+  }
+
   output_path <- normalizePath(output_path, mustWork = FALSE, winslash = "/")
   out_dir <- dirname(output_path)
   if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
