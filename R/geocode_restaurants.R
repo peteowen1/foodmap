@@ -105,6 +105,23 @@ geocode_cache_apply <- function(restaurants, cache_path) {
     by = c("name", "suburb"),
     unmatched = "ignore"
   )
+
+  # Self-heal: any cached coords that fall outside Australia get cleared
+  # so they'll be re-geocoded with the AU-biased query
+  bad <- !is.na(restaurants$latitude) &
+    !is_in_australia(restaurants$latitude, restaurants$longitude)
+  if (any(bad)) {
+    cli::cli_warn(
+      "{sum(bad)} cached coord{?s} fell outside Australia and will be re-geocoded"
+    )
+    restaurants$latitude[bad] <- NA_real_
+    restaurants$longitude[bad] <- NA_real_
+    if ("formatted_address" %in% names(restaurants))
+      restaurants$formatted_address[bad] <- NA_character_
+    if ("place_id" %in% names(restaurants))
+      restaurants$place_id[bad] <- NA_character_
+  }
+
   reused <- sum(!is.na(restaurants$latitude)) - before
   if (reused > 0) {
     cli::cli_alert_info(
@@ -165,11 +182,37 @@ build_geocode_query <- function(name, suburb) {
   paste(parts, collapse = " ")
 }
 
+#' Approximate bounding box of mainland Australia + Tasmania, used to
+#' validate cached/returned coordinates and bias Places API queries
+#' @noRd
+AU_BBOX <- list(lat = c(-44, -10), lng = c(112, 154))
+
+#' Are these coordinates inside the Australia bounding box?
+#' @noRd
+is_in_australia <- function(lat, lng) {
+  !is.na(lat) & !is.na(lng) &
+    lat >= AU_BBOX$lat[1] & lat <= AU_BBOX$lat[2] &
+    lng >= AU_BBOX$lng[1] & lng <= AU_BBOX$lng[2]
+}
+
 #' Call Google Places API (New) Text Search
+#'
+#' Biases results to Australian places via `regionCode = "AU"` and a
+#' `locationBias` rectangle covering Australia. Falls back to the global
+#' result if no AU-specific match exists.
 #' @noRd
 places_text_search <- function(query, api_key) {
 
-  body <- list(textQuery = query)
+  body <- list(
+    textQuery   = query,
+    regionCode  = "AU",
+    locationBias = list(
+      rectangle = list(
+        low  = list(latitude = AU_BBOX$lat[1], longitude = AU_BBOX$lng[1]),
+        high = list(latitude = AU_BBOX$lat[2], longitude = AU_BBOX$lng[2])
+      )
+    )
+  )
 
   resp <- tryCatch(
     httr2::request("https://places.googleapis.com/v1/places:searchText") |>
@@ -197,11 +240,21 @@ places_text_search <- function(query, api_key) {
     return(NULL)
   }
 
-  top <- places[[1]]
-  list(
-    lat      = top$location$latitude,
-    lng      = top$location$longitude,
-    address  = top$formattedAddress %||% NA_character_,
-    place_id = top$id %||% NA_character_
-  )
+  # Reject any non-AU results that slipped through (region bias is a
+  # preference, not a hard restriction)
+  for (p in places) {
+    lat <- p$location$latitude
+    lng <- p$location$longitude
+    if (is_in_australia(lat, lng)) {
+      return(list(
+        lat      = lat,
+        lng      = lng,
+        address  = p$formattedAddress %||% NA_character_,
+        place_id = p$id %||% NA_character_
+      ))
+    }
+  }
+
+  cli::cli_warn("No Australian results for {.val {query}}")
+  NULL
 }
