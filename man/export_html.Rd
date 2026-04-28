@@ -25,10 +25,19 @@ Builds a self-contained interactive map for embedding on a website or
 viewing on a phone. Pins are colour-coded by hat tier (when present)
 or by source-overlap count, with marker clustering for performance and
 rich popups including rating, cuisine, price, source list, and a
-truncated description. Suitable for hosting on GitHub Pages or any
-static host.
+truncated description. A custom filter panel in the top-right lets
+the viewer:
 }
 \details{
-Requires the \code{leaflet}, \code{htmlwidgets} and \code{htmltools} packages
-(Suggests).
+\itemize{
+\item Toggle each tier (3 hats / 2 hats / etc.) on or off
+\item Pick one or more guides (Broadsheet, Time Out, AGFG, ...) and
+choose whether the venue must appear in \strong{any} selected guide
+(union) or \strong{all} of them (intersection)
+}
+
+Suitable for hosting on GitHub Pages or any static host.
+
+Requires the \code{leaflet}, \code{htmlwidgets}, \code{htmltools} and \code{jsonlite}
+packages (Suggests).
 }

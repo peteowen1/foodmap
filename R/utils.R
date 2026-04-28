@@ -73,21 +73,22 @@ CUISINE_NAMES <- c(
 #' @noRd
 valid_sources <- function() {
   c("broadsheet", "gourmet_traveller", "timeout", "urban_list", "agfg",
-    "good_food_guide", "gfg_awards")
+    "good_food_guide", "gfg_awards", "concrete_playground")
 }
 
 #' Cities supported by a given source
 #' @noRd
 supported_cities_for_source <- function(source) {
   switch(source,
-    broadsheet        = c("sydney", "melbourne", "brisbane", "adelaide", "perth", "hobart"),
-    gourmet_traveller = c("sydney", "melbourne"),
-    timeout           = c("sydney", "melbourne"),
-    urban_list        = c("sydney", "melbourne"),
-    agfg              = c("sydney", "melbourne", "brisbane", "adelaide", "perth",
-                          "hobart", "canberra", "darwin", "gold-coast"),
-    good_food_guide   = c("sydney", "melbourne"),
-    gfg_awards        = "sydney",
+    broadsheet          = c("sydney", "melbourne", "brisbane", "adelaide", "perth", "hobart"),
+    gourmet_traveller   = c("sydney", "melbourne"),
+    timeout             = c("sydney", "melbourne"),
+    urban_list          = c("sydney", "melbourne"),
+    agfg                = c("sydney", "melbourne", "brisbane", "adelaide", "perth",
+                            "hobart", "canberra", "darwin", "gold-coast"),
+    good_food_guide     = c("sydney", "melbourne"),
+    gfg_awards          = "sydney",
+    concrete_playground = c("sydney", "melbourne"),
     cli::cli_abort("Unknown source: {.val {source}}")
   )
 }
