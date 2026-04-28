@@ -89,6 +89,17 @@ export_html <- function(restaurants,
   }
   all_sources <- sort(unique(unlist(sources_split)))
 
+  # Cuisine list per venue — one venue can list several (e.g. "Italian, Pizza")
+  cuisines_split <- if ("cuisine" %in% names(geo)) {
+    lapply(strsplit(geo$cuisine, ",\\s*"), function(x) {
+      x <- x[!is.na(x) & nzchar(x)]
+      tolower(x)
+    })
+  } else {
+    rep(list(character()), nrow(geo))
+  }
+  all_cuisines <- sort(unique(unlist(cuisines_split)))
+
   geo$popup_html <- vapply(seq_len(nrow(geo)),
                            build_popup_html,
                            character(1),
@@ -108,7 +119,8 @@ export_html <- function(restaurants,
       # I() prevents jsonlite::toJSON(auto_unbox = TRUE) from collapsing
       # a length-1 character vector into a bare string (which would
       # break .some()/.every() on the JS side)
-      sources   = I(sources_split[[i]])
+      sources   = I(sources_split[[i]]),
+      cuisines  = I(cuisines_split[[i]])
     )
   })
   marker_json <- jsonlite::toJSON(marker_records, auto_unbox = TRUE,
@@ -132,7 +144,7 @@ export_html <- function(restaurants,
       lng2 = bbox$lng_max, lat2 = bbox$lat_max
     ) |>
     leaflet::addControl(
-      html     = filter_panel_html(tier_order, all_sources),
+      html     = filter_panel_html(tier_order, all_sources, all_cuisines),
       position = "topright",
       className = "foodmap-filter-control"
     ) |>
@@ -213,11 +225,11 @@ build_popup_html <- function(i, geo) {
 }
 
 
-#' Build the filter-panel HTML — tier checkboxes, source checkboxes,
-#' AND/OR mode radio, min-guides select, all/none toggles, plus the
-#' colour legend.
+#' Build the filter-panel HTML — collapsible header with venue counter,
+#' name search, tier/guide/cuisine checkbox sections (each with all/none
+#' toggles), and a min-selected-guides-matched dropdown.
 #' @noRd
-filter_panel_html <- function(tier_order, all_sources) {
+filter_panel_html <- function(tier_order, all_sources, all_cuisines = character()) {
   esc <- htmltools::htmlEscape
 
   tier_swatch <- list(
@@ -247,6 +259,17 @@ filter_panel_html <- function(tier_order, all_sources) {
     )
   }, character(1))
 
+  cuisine_rows <- if (length(all_cuisines) > 0) {
+    vapply(all_cuisines, function(c) {
+      sprintf(
+        paste0("<label style='display:block;cursor:pointer;'>",
+               "<input type='checkbox' class='fm-cuisine' value='%s' checked> ",
+               "%s</label>"),
+        esc(c), esc(c)
+      )
+    }, character(1))
+  } else character(0)
+
   # Mini "All / None" toggle for a checkbox group, identified via target
   # CSS class. Tiny inline buttons to keep the panel compact.
   toggle_btns <- function(target_class) {
@@ -271,29 +294,56 @@ filter_panel_html <- function(tier_order, all_sources) {
     sprintf("<option value='%d'%s>%s</option>", n, sel, label)
   }, character(1))
 
+  cuisine_block <- if (length(cuisine_rows) > 0) {
+    paste0(
+      "<div style='font-weight:600;margin-top:10px;margin-bottom:4px'>",
+      "Cuisine", toggle_btns("fm-cuisine"), "</div>",
+      "<div style='max-height:120px;overflow-y:auto;border:1px solid #eee;",
+      "border-radius:4px;padding:4px 6px;background:#fafafa'>",
+      paste(cuisine_rows, collapse = ""),
+      "</div>"
+    )
+  } else ""
+
   paste0(
     "<div class='foodmap-filter' style='background:rgba(255,255,255,0.96);",
-    "padding:10px 12px;border-radius:8px;font-family:sans-serif;font-size:12px;",
-    "box-shadow:0 1px 6px rgba(0,0,0,0.18);max-width:240px;line-height:1.55'>",
+    "padding:0;border-radius:8px;font-family:sans-serif;font-size:12px;",
+    "box-shadow:0 1px 6px rgba(0,0,0,0.18);max-width:260px;line-height:1.55'>",
+    # Header — always visible, holds toggle + counter
+    "<div class='fm-header' style='padding:8px 12px;display:flex;",
+    "align-items:center;justify-content:space-between;gap:8px;",
+    "cursor:pointer;user-select:none'>",
+    "<span style='font-weight:700'>",
+    "<span class='fm-toggle-icon' style='display:inline-block;width:14px'>",
+    "&#9660;</span> foodmap</span>",
+    "<span id='fm-count' style='color:#666;font-size:11px'></span>",
+    "</div>",
+    # Body — collapsible
+    "<div class='fm-body' style='padding:0 12px 10px 12px;",
+    "border-top:1px solid #eee'>",
+    # Search input
+    "<div style='font-weight:600;margin-top:8px;margin-bottom:4px'>Search</div>",
+    "<input type='text' id='fm-search' placeholder='Venue name...' ",
+    "style='width:100%;box-sizing:border-box;font-family:inherit;",
+    "font-size:12px;padding:4px 6px;border:1px solid #ccc;border-radius:4px'>",
     # Tier section with all/none toggles
-    "<div style='font-weight:600;margin-bottom:4px'>",
+    "<div style='font-weight:600;margin-top:10px;margin-bottom:4px'>",
     "Tier", toggle_btns("fm-tier"), "</div>",
     paste(tier_rows, collapse = ""),
     # Source section with all/none toggles
     "<div style='font-weight:600;margin-top:10px;margin-bottom:4px'>",
     "Guide", toggle_btns("fm-source"), "</div>",
     paste(source_rows, collapse = ""),
-    # Min-guides: must appear in at least N of the *selected* guides.
-    # ≥1 acts like the old "any" mode, ≥N (where N = number of guides
-    # ticked) acts like the old "all" mode.
+    # Min-guides: must appear in at least N of the *selected* guides
     "<div style='font-weight:600;margin-top:10px;margin-bottom:4px'>",
     "Min selected guides matched</div>",
     "<select id='fm-min-sources' style='font-family:inherit;font-size:12px'>",
     paste(min_options, collapse = ""),
     "</select>",
-    # Counter
-    "<div id='fm-count' style='margin-top:10px;color:#666;font-size:11px'></div>",
-    "</div>"
+    # Cuisine section (only if any cuisines)
+    cuisine_block,
+    "</div>",  # /.fm-body
+    "</div>"   # /.foodmap-filter
   )
 }
 
@@ -338,17 +388,22 @@ function(el, x) {
     });
   }
 
+  function asArray(v) {
+    if (typeof v === 'string') return [v];
+    if (!v) return [];
+    return v;
+  }
+
   var allMarkers = markerData.map(function(d) {
     var marker = L.marker([d.lat, d.lng], { icon: fmIcon(d.color), title: d.name });
     marker.bindPopup(d.popup);
-    marker._fmTier = d.tier;
+    marker._fmTier        = d.tier;
+    marker._fmName        = (d.name || '').toLowerCase();
     // Defensive: serializers sometimes collapse 1-element arrays to a
     // bare string. Promote to array so .some()/.every() work.
-    var src = d.sources;
-    if (typeof src === 'string') src = [src];
-    if (!src) src = [];
-    marker._fmSources = src;
-    marker._fmNumSources = (typeof d.n_sources === 'number') ? d.n_sources : src.length;
+    marker._fmSources     = asArray(d.sources);
+    marker._fmNumSources  = (typeof d.n_sources === 'number') ? d.n_sources : marker._fmSources.length;
+    marker._fmCuisines    = asArray(d.cuisines);
     return marker;
   });
 
@@ -366,30 +421,45 @@ function(el, x) {
     return sel ? parseInt(sel.value, 10) || 1 : 1;
   }
 
+  // Cache the total cuisine count so we know when 'all are checked'
+  var totalCuisines = document.querySelectorAll('.fm-cuisine').length;
+
   function applyFilter() {
-    var tiers   = getChecked('.fm-tier');
-    var sources = getChecked('.fm-source');
-    var minN    = getMinSources();
+    var tiers    = getChecked('.fm-tier');
+    var sources  = getChecked('.fm-source');
+    var cuisines = getChecked('.fm-cuisine');
+    var minN     = getMinSources();
+    var searchEl = document.getElementById('fm-search');
+    var query    = searchEl ? searchEl.value.trim().toLowerCase() : '';
+
     var tierSet = {};
     tiers.forEach(function(t) { tierSet[t] = true; });
     var sourceSet = {};
     sources.forEach(function(s) { sourceSet[s] = true; });
+    var cuisineSet = {};
+    cuisines.forEach(function(c) { cuisineSet[c] = true; });
+    var cuisineActive = totalCuisines > 0 && cuisines.length < totalCuisines;
 
-    // Min N is interpreted relative to the selected guide set: a venue
-    // must appear in at least minN of the currently-ticked guides. With
-    // minN=1 this is union (any selected guide); with minN=count(sources)
-    // it's intersection (all selected guides must match).
     var visible = allMarkers.filter(function(m) {
       if (!tierSet[m._fmTier]) return false;
+      if (query && m._fmName.indexOf(query) === -1) return false;
+
       if (sources.length === 0) return false;
       var hits = 0;
       for (var i = 0; i < m._fmSources.length; i++) {
-        if (sourceSet[m._fmSources[i]]) {
-          hits++;
-          if (hits >= minN) return true;
-        }
+        if (sourceSet[m._fmSources[i]]) hits++;
       }
-      return false;
+      if (hits < minN) return false;
+
+      if (cuisineActive) {
+        if (m._fmCuisines.length === 0) return cuisines.length > 0;
+        var cuisineHit = false;
+        for (var j = 0; j < m._fmCuisines.length; j++) {
+          if (cuisineSet[m._fmCuisines[j]]) { cuisineHit = true; break; }
+        }
+        if (!cuisineHit) return false;
+      }
+      return true;
     });
 
     cluster.clearLayers();
@@ -397,27 +467,42 @@ function(el, x) {
 
     var counter = document.getElementById('fm-count');
     if (counter) {
-      counter.textContent = visible.length + ' / ' + allMarkers.length + ' venues shown';
+      counter.textContent = visible.length + ' / ' + allMarkers.length;
     }
   }
 
   // Wire up listeners — every checkbox/select re-applies the filter
-  document.querySelectorAll('.fm-tier, .fm-source').forEach(function(input) {
+  document.querySelectorAll('.fm-tier, .fm-source, .fm-cuisine').forEach(function(input) {
     input.addEventListener('change', applyFilter);
   });
   var minSel = document.getElementById('fm-min-sources');
   if (minSel) minSel.addEventListener('change', applyFilter);
+  var searchInput = document.getElementById('fm-search');
+  if (searchInput) searchInput.addEventListener('input', applyFilter);
 
   // All/none toggle buttons set every checkbox in the named group at once
   document.querySelectorAll('.fm-toggle').forEach(function(btn) {
     btn.addEventListener('click', function(e) {
       e.preventDefault();
+      e.stopPropagation();
       var cls = btn.getAttribute('data-target');
       var on  = btn.getAttribute('data-value') === '1';
       document.querySelectorAll('.' + cls).forEach(function(cb) { cb.checked = on; });
       applyFilter();
     });
   });
+
+  // Header click toggles body visibility (the chevron icon flips)
+  var header = document.querySelector('.foodmap-filter .fm-header');
+  var body   = document.querySelector('.foodmap-filter .fm-body');
+  var icon   = document.querySelector('.foodmap-filter .fm-toggle-icon');
+  if (header && body) {
+    header.addEventListener('click', function() {
+      var hidden = body.style.display === 'none';
+      body.style.display = hidden ? '' : 'none';
+      if (icon) icon.textContent = hidden ? '▼' : '▶';
+    });
+  }
 
   // Stop the filter panel from forwarding map drags / scrolls so the
   // checkboxes feel native rather than panning the map underneath
