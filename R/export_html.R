@@ -263,14 +263,37 @@ function(el, x) {
 
   // Build all marker objects up front; we'll add/remove them from the
   // cluster as filters change rather than recreating each time.
-  var allMarkers = markerData.map(function(d) {
-    var icon = L.AwesomeMarkers.icon({
-      icon: 'cutlery', prefix: 'fa',
-      markerColor: d.color, iconColor: 'white'
+  var fmColors = {
+    darkpurple: '#5b2c6f',
+    purple:     '#8e44ad',
+    pink:       '#e91e63',
+    darkred:    '#922b21',
+    red:        '#e74c3c',
+    orange:     '#f39c12',
+    blue:       '#3498db'
+  };
+  function fmIcon(color) {
+    var c = fmColors[color] || fmColors.blue;
+    var html =
+      \"<div style='background:\" + c + \";width:26px;height:26px;\" +
+      \"border-radius:50% 50% 50% 0;transform:rotate(-45deg);\" +
+      \"border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);\" +
+      \"display:flex;align-items:center;justify-content:center'>\" +
+      \"<span style='transform:rotate(45deg);color:white;font-size:14px;\" +
+      \"line-height:1'>\\u{1F374}</span></div>\";
+    return L.divIcon({
+      className: 'fm-pin',
+      html: html,
+      iconSize:   [26, 26],
+      iconAnchor: [13, 26],
+      popupAnchor: [0, -26]
     });
-    var marker = L.marker([d.lat, d.lng], { icon: icon, title: d.name });
+  }
+
+  var allMarkers = markerData.map(function(d) {
+    var marker = L.marker([d.lat, d.lng], { icon: fmIcon(d.color), title: d.name });
     marker.bindPopup(d.popup);
-    marker._fmTier    = d.tier;
+    marker._fmTier = d.tier;
     // Defensive: serializers sometimes collapse 1-element arrays to a
     // bare string. Promote to array so .some()/.every() work.
     var src = d.sources;
