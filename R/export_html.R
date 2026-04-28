@@ -283,16 +283,14 @@ filter_panel_html <- function(tier_order, all_sources) {
     "<div style='font-weight:600;margin-top:10px;margin-bottom:4px'>",
     "Guide", toggle_btns("fm-source"), "</div>",
     paste(source_rows, collapse = ""),
-    # Min-guides + match-mode on one row
-    "<div style='font-weight:600;margin-top:10px;margin-bottom:4px'>Min guides</div>",
+    # Min-guides: must appear in at least N of the *selected* guides.
+    # ≥1 acts like the old "any" mode, ≥N (where N = number of guides
+    # ticked) acts like the old "all" mode.
+    "<div style='font-weight:600;margin-top:10px;margin-bottom:4px'>",
+    "Min selected guides matched</div>",
     "<select id='fm-min-sources' style='font-family:inherit;font-size:12px'>",
     paste(min_options, collapse = ""),
     "</select>",
-    "<div style='font-weight:600;margin-top:10px;margin-bottom:4px'>Match guides</div>",
-    "<label style='cursor:pointer;margin-right:10px'>",
-    "<input type='radio' name='fm-mode' value='or' checked> any</label>",
-    "<label style='cursor:pointer'>",
-    "<input type='radio' name='fm-mode' value='and'> all</label>",
     # Counter
     "<div id='fm-count' style='margin-top:10px;color:#666;font-size:11px'></div>",
     "</div>"
@@ -363,10 +361,6 @@ function(el, x) {
       function(el) { return el.value; }
     );
   }
-  function getMode() {
-    var r = document.querySelector('input[name=fm-mode]:checked');
-    return r ? r.value : 'or';
-  }
   function getMinSources() {
     var sel = document.getElementById('fm-min-sources');
     return sel ? parseInt(sel.value, 10) || 1 : 1;
@@ -375,23 +369,27 @@ function(el, x) {
   function applyFilter() {
     var tiers   = getChecked('.fm-tier');
     var sources = getChecked('.fm-source');
-    var mode    = getMode();
     var minN    = getMinSources();
     var tierSet = {};
     tiers.forEach(function(t) { tierSet[t] = true; });
     var sourceSet = {};
     sources.forEach(function(s) { sourceSet[s] = true; });
 
+    // Min N is interpreted relative to the selected guide set: a venue
+    // must appear in at least minN of the currently-ticked guides. With
+    // minN=1 this is union (any selected guide); with minN=count(sources)
+    // it's intersection (all selected guides must match).
     var visible = allMarkers.filter(function(m) {
       if (!tierSet[m._fmTier]) return false;
-      if (m._fmNumSources < minN) return false;
       if (sources.length === 0) return false;
-      if (mode === 'and') {
-        return sources.every(function(s) {
-          return m._fmSources.indexOf(s) !== -1;
-        });
+      var hits = 0;
+      for (var i = 0; i < m._fmSources.length; i++) {
+        if (sourceSet[m._fmSources[i]]) {
+          hits++;
+          if (hits >= minN) return true;
+        }
       }
-      return m._fmSources.some(function(s) { return sourceSet[s]; });
+      return false;
     });
 
     cluster.clearLayers();
@@ -403,8 +401,8 @@ function(el, x) {
     }
   }
 
-  // Wire up listeners — every checkbox/radio/select re-applies the filter
-  document.querySelectorAll('.fm-tier, .fm-source, input[name=fm-mode]').forEach(function(input) {
+  // Wire up listeners — every checkbox/select re-applies the filter
+  document.querySelectorAll('.fm-tier, .fm-source').forEach(function(input) {
     input.addEventListener('change', applyFilter);
   });
   var minSel = document.getElementById('fm-min-sources');
