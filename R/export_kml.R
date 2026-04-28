@@ -9,12 +9,15 @@ source_style_id <- function(source) {
     urban_list        = "ffff00ff",  # magenta
     agfg              = "ff00ccff",  # yellow
     good_food_guide   = "ff0088ff",  # dark orange
+    gfg_awards        = "ffcc00cc",  # purple — SMH GFG annual hat awards
     multiple          = "ff00ffff"   # gold — venues in 2+ sources
   )
   # Use first source for combined strings like "broadsheet, timeout"
   primary <- stringr::str_split(source, ",\\s*")[[1]][1]
-  if (grepl(",", source)) return(styles[["multiple"]])
-  styles[[primary]] %||% "ff0000ff"
+  if (grepl(",", source)) return(unname(styles["multiple"]))
+  # Safe lookup: single-bracket returns NA for unknown keys (no error)
+  hit <- unname(styles[primary])
+  if (is.na(hit)) "ff0000ff" else hit
 }
 
 #' Extract the primary (first) source from a possibly combined source string

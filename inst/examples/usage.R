@@ -18,6 +18,7 @@ create_food_map("sydney", source = "timeout", output_dir = "~/maps")
 create_food_map("sydney", source = "agfg", output_dir = "~/maps")
 create_food_map("sydney", source = "urban_list", output_dir = "~/maps")
 create_food_map("sydney", source = "good_food_guide", output_dir = "~/maps")
+create_food_map("sydney", source = "gfg_awards", output_dir = "~/maps") # SMH GFG 2026 hat winners
 
 # --- Step-by-step for more control ---
 

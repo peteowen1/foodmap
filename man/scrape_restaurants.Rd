@@ -16,7 +16,7 @@ scrape_restaurants(
 
 \item{source}{Character. Source to scrape from. One of \code{"broadsheet"},
 \code{"gourmet_traveller"}, \code{"timeout"}, \code{"urban_list"}, \code{"agfg"},
-\code{"good_food_guide"}. Default \code{"broadsheet"}.}
+\code{"good_food_guide"}, \code{"gfg_awards"}. Default \code{"broadsheet"}.}
 
 \item{use_chromote}{Logical. Force headless Chrome rendering where applicable.
 Default \code{FALSE}.}
