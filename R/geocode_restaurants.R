@@ -2,31 +2,48 @@
 #'
 #' For rows missing latitude/longitude, queries the Google Places API (New)
 #' Text Search to resolve coordinates. Safe to re-run — skips rows that
-#' already have coordinates.
+#' already have coordinates and reuses prior results from a local cache.
 #'
 #' @param restaurants A tibble as returned by [scrape_broadsheet()].
 #' @param api_key Character. Google Places API key. Defaults to the
 #'   `GOOGLE_PLACES_API_KEY` environment variable.
+#' @param cache_path Character or `NULL`. Path to a CSV file used to cache
+#'   geocoded coordinates by `(name, suburb)` between runs. The cache is
+#'   read before any API calls (filling in matching rows missing coords)
+#'   and updated after geocoding. Default `"cache/geocodes.csv"`.
+#'   Pass `NULL` to disable caching entirely.
+#' @param force_refresh Logical. If `TRUE`, ignore the cache when reading
+#'   (so all rows missing coords get re-geocoded), but still write fresh
+#'   results back to the cache. Useful when upstream data has changed and
+#'   you suspect cached coordinates are stale. Default `FALSE`.
 #'
 #' @return The input tibble with `latitude`, `longitude`, `formatted_address`,
 #'   and `place_id` columns populated.
 #' @export
-geocode_restaurants <- function(restaurants, api_key = NULL) {
+geocode_restaurants <- function(restaurants,
+                                api_key = NULL,
+                                cache_path = "cache/geocodes.csv",
+                                force_refresh = FALSE) {
 
-  api_key <- resolve_api_key(api_key)
+  restaurants <- ensure_geocode_cols(restaurants)
+
+  # Step 1 — fill in coordinates from the on-disk cache (unless overridden)
+  if (!is.null(cache_path) && !force_refresh && file.exists(cache_path)) {
+    restaurants <- geocode_cache_apply(restaurants, cache_path)
+  }
 
   needs_geocoding <- is.na(restaurants$latitude) | is.na(restaurants$longitude)
   n_todo <- sum(needs_geocoding)
 
   if (n_todo == 0) {
     cli::cli_alert_success("All {nrow(restaurants)} venues already have coordinates")
-    return(ensure_geocode_cols(restaurants))
+    if (!is.null(cache_path)) geocode_cache_write(restaurants, cache_path)
+    return(restaurants)
   }
 
   cli::cli_h2("Geocoding {n_todo} venue{?s} via Google Places API")
 
-  # Add columns if missing
-  restaurants <- ensure_geocode_cols(restaurants)
+  api_key <- resolve_api_key(api_key)
 
   cli::cli_progress_bar("Geocoding", total = n_todo)
   idx <- which(needs_geocoding)
@@ -57,7 +74,75 @@ geocode_restaurants <- function(restaurants, api_key = NULL) {
     cli::cli_warn("{n_missing} venue{?s} could not be geocoded")
   }
 
+  # Step 3 — persist the (now expanded) coordinate set to the cache
+  if (!is.null(cache_path)) geocode_cache_write(restaurants, cache_path)
+
   restaurants
+}
+
+#' Read a geocode cache CSV and fill matching coords into a restaurants tibble
+#' @noRd
+geocode_cache_apply <- function(restaurants, cache_path) {
+  cached <- tryCatch(
+    utils::read.csv(cache_path, stringsAsFactors = FALSE,
+                    na.strings = c("", "NA")),
+    error = function(e) NULL
+  )
+  required <- c("name", "suburb", "latitude", "longitude")
+  if (is.null(cached) || !all(required %in% names(cached))) {
+    return(restaurants)
+  }
+  cache_cols <- intersect(
+    names(cached),
+    c("name", "suburb", "latitude", "longitude", "formatted_address", "place_id")
+  )
+  cached <- cached[!is.na(cached$latitude), cache_cols, drop = FALSE]
+  cached <- cached[!duplicated(cached[, c("name", "suburb")]), , drop = FALSE]
+
+  before <- sum(!is.na(restaurants$latitude))
+  restaurants <- dplyr::rows_update(
+    restaurants, cached,
+    by = c("name", "suburb"),
+    unmatched = "ignore"
+  )
+  reused <- sum(!is.na(restaurants$latitude)) - before
+  if (reused > 0) {
+    cli::cli_alert_info(
+      "Reused {reused} cached coordinate{?s} from {.file {cache_path}}"
+    )
+  }
+  restaurants
+}
+
+#' Persist successfully-geocoded rows to the cache CSV (upserting by name+suburb)
+#' @noRd
+geocode_cache_write <- function(restaurants, cache_path) {
+  rows <- restaurants[
+    !is.na(restaurants$latitude) & !is.na(restaurants$longitude),
+    c("name", "suburb", "latitude", "longitude",
+      "formatted_address", "place_id")
+  ]
+  if (nrow(rows) == 0) return(invisible(NULL))
+  rows <- rows[!duplicated(rows[, c("name", "suburb")]), , drop = FALSE]
+
+  if (file.exists(cache_path)) {
+    existing <- tryCatch(
+      utils::read.csv(cache_path, stringsAsFactors = FALSE,
+                      na.strings = c("", "NA")),
+      error = function(e) NULL
+    )
+    if (!is.null(existing) && all(c("name", "suburb") %in% names(existing))) {
+      merged <- dplyr::rows_upsert(existing, rows, by = c("name", "suburb"))
+    } else {
+      merged <- rows
+    }
+  } else {
+    dir.create(dirname(cache_path), showWarnings = FALSE, recursive = TRUE)
+    merged <- rows
+  }
+
+  utils::write.csv(merged, cache_path, row.names = FALSE)
+  invisible(NULL)
 }
 
 #' Ensure geocode output columns exist

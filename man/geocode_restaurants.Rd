@@ -4,13 +4,29 @@
 \alias{geocode_restaurants}
 \title{Geocode restaurants via Google Places API}
 \usage{
-geocode_restaurants(restaurants, api_key = NULL)
+geocode_restaurants(
+  restaurants,
+  api_key = NULL,
+  cache_path = "cache/geocodes.csv",
+  force_refresh = FALSE
+)
 }
 \arguments{
 \item{restaurants}{A tibble as returned by \code{\link[=scrape_broadsheet]{scrape_broadsheet()}}.}
 
 \item{api_key}{Character. Google Places API key. Defaults to the
 \code{GOOGLE_PLACES_API_KEY} environment variable.}
+
+\item{cache_path}{Character or \code{NULL}. Path to a CSV file used to cache
+geocoded coordinates by \verb{(name, suburb)} between runs. The cache is
+read before any API calls (filling in matching rows missing coords)
+and updated after geocoding. Default \code{"cache/geocodes.csv"}.
+Pass \code{NULL} to disable caching entirely.}
+
+\item{force_refresh}{Logical. If \code{TRUE}, ignore the cache when reading
+(so all rows missing coords get re-geocoded), but still write fresh
+results back to the cache. Useful when upstream data has changed and
+you suspect cached coordinates are stale. Default \code{FALSE}.}
 }
 \value{
 The input tibble with \code{latitude}, \code{longitude}, \code{formatted_address},
@@ -19,5 +35,5 @@ and \code{place_id} columns populated.
 \description{
 For rows missing latitude/longitude, queries the Google Places API (New)
 Text Search to resolve coordinates. Safe to re-run — skips rows that
-already have coordinates.
+already have coordinates and reuses prior results from a local cache.
 }
