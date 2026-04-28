@@ -50,7 +50,7 @@ geocode_restaurants <- function(restaurants,
 
   for (i in idx) {
     row <- restaurants[i, ]
-    query <- build_geocode_query(row$name, row$suburb)
+    query <- build_geocode_query(row$name, row$suburb, row$address)
 
     result <- places_text_search(query, api_key)
 
@@ -175,9 +175,16 @@ ensure_geocode_cols <- function(df) {
 }
 
 #' Build a geocoding query string
+#'
+#' Includes the source-provided address when available, since it's a
+#' much stronger signal than name+suburb alone (e.g. "South End Newtown"
+#' picks the wrong end of King Street; "South End 644 King Street
+#' Erskineville Newtown" picks the right venue). Address is allowed to
+#' contradict suburb because guides routinely disagree on which suburb
+#' a boundary venue belongs to.
 #' @noRd
-build_geocode_query <- function(name, suburb) {
-  parts <- c(name, suburb, "Australia")
+build_geocode_query <- function(name, suburb, address = NA_character_) {
+  parts <- c(name, address, suburb, "Australia")
   parts <- parts[!is.na(parts) & nchar(parts) > 0]
   paste(parts, collapse = " ")
 }
