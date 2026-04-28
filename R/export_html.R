@@ -294,14 +294,34 @@ filter_panel_html <- function(tier_order, all_sources, all_cuisines = character(
     sprintf("<option value='%d'%s>%s</option>", n, sel, label)
   }, character(1))
 
-  cuisine_block <- if (length(cuisine_rows) > 0) {
+  # Section helper: collapsible header (chevron + label + all/none) + body.
+  # `body_html` is whatever should hide when the section is collapsed.
+  section_html <- function(label, toggle_target, body_html) {
     paste0(
-      "<div style='font-weight:600;margin-top:10px;margin-bottom:4px'>",
-      "Cuisine", toggle_btns("fm-cuisine"), "</div>",
-      "<div style='max-height:120px;overflow-y:auto;border:1px solid #eee;",
-      "border-radius:4px;padding:4px 6px;background:#fafafa'>",
-      paste(cuisine_rows, collapse = ""),
-      "</div>"
+      "<div class='fm-section' style='margin-top:10px'>",
+      "<div class='fm-section-header' style='font-weight:600;",
+      "margin-bottom:4px;cursor:pointer;user-select:none;",
+      "display:flex;align-items:center;gap:6px'>",
+      "<span class='fm-section-toggle' style='display:inline-block;",
+      "width:12px;text-align:center;font-size:10px'>▼</span>",
+      "<span style='flex:1'>", label, "</span>",
+      toggle_btns(toggle_target),
+      "</div>",
+      "<div class='fm-section-body'>",
+      body_html,
+      "</div></div>"
+    )
+  }
+
+  cuisine_block <- if (length(cuisine_rows) > 0) {
+    section_html(
+      "Cuisine", "fm-cuisine",
+      paste0(
+        "<div style='max-height:120px;overflow-y:auto;border:1px solid #eee;",
+        "border-radius:4px;padding:4px 6px;background:#fafafa'>",
+        paste(cuisine_rows, collapse = ""),
+        "</div>"
+      )
     )
   } else ""
 
@@ -326,14 +346,9 @@ filter_panel_html <- function(tier_order, all_sources, all_cuisines = character(
     "<input type='text' id='fm-search' placeholder='Venue name...' ",
     "style='width:100%;box-sizing:border-box;font-family:inherit;",
     "font-size:12px;padding:4px 6px;border:1px solid #ccc;border-radius:4px'>",
-    # Tier section with all/none toggles
-    "<div style='font-weight:600;margin-top:10px;margin-bottom:4px'>",
-    "Tier", toggle_btns("fm-tier"), "</div>",
-    paste(tier_rows, collapse = ""),
-    # Source section with all/none toggles
-    "<div style='font-weight:600;margin-top:10px;margin-bottom:4px'>",
-    "Guide", toggle_btns("fm-source"), "</div>",
-    paste(source_rows, collapse = ""),
+    # Tier / Guide sections — both wrapped in collapsible .fm-section
+    section_html("Tier",  "fm-tier",   paste(tier_rows, collapse = "")),
+    section_html("Guide", "fm-source", paste(source_rows, collapse = "")),
     # Min-guides: must appear in at least N of the *selected* guides
     "<div style='font-weight:600;margin-top:10px;margin-bottom:4px'>",
     "Min selected guides matched</div>",
@@ -492,7 +507,7 @@ function(el, x) {
     });
   });
 
-  // Header click toggles body visibility (the chevron icon flips)
+  // Main panel header — toggles the entire body
   var header = document.querySelector('.foodmap-filter .fm-header');
   var body   = document.querySelector('.foodmap-filter .fm-body');
   var icon   = document.querySelector('.foodmap-filter .fm-toggle-icon');
@@ -503,6 +518,23 @@ function(el, x) {
       if (icon) icon.textContent = hidden ? '▼' : '▶';
     });
   }
+
+  // Per-section headers — each toggles its own .fm-section-body. Ignore
+  // clicks that originated on the All/None buttons (they have their own
+  // handlers and call stopPropagation, but a defensive tag check keeps
+  // the rule explicit).
+  document.querySelectorAll('.foodmap-filter .fm-section-header').forEach(function(h) {
+    h.addEventListener('click', function(e) {
+      if (e.target.tagName === 'BUTTON') return;
+      var section = h.parentElement;
+      var sbody = section.querySelector('.fm-section-body');
+      var sicon = h.querySelector('.fm-section-toggle');
+      if (!sbody) return;
+      var hidden = sbody.style.display === 'none';
+      sbody.style.display = hidden ? '' : 'none';
+      if (sicon) sicon.textContent = hidden ? '▼' : '▶';
+    });
+  });
 
   // Stop the filter panel from forwarding map drags / scrolls so the
   // checkboxes feel native rather than panning the map underneath
