@@ -40,22 +40,45 @@ cache_path <- function(url, cache_dir = "cache") {
 #' @param url Character. URL to fetch.
 #' @param use_cache Logical. Whether to use the cache.
 #' @param max_age_hours Numeric. Maximum cache age in hours. Default 24.
+#' @param extra_headers Named list of additional HTTP headers (e.g.
+#'   `Referer`, `Accept-Language`) layered on top of the default
+#'   User-Agent. Sites behind aggressive CDNs (Michelin Guide) need
+#'   these to avoid soft-blocked responses.
+#' @param validate Optional function `(html) -> logical`. Runs on both
+#'   fresh fetches and cache hits. If it returns anything other than
+#'   `TRUE`, the response is treated as invalid: cache hits are
+#'   discarded and a fresh fetch is attempted, fresh fetches throw
+#'   an error and are *not* written to cache. Use this to reject bot
+#'   challenges (e.g. AWS WAF) that return HTTP 200 with placeholder
+#'   bodies — without validation those poison the cache permanently.
 #' @return HTML response body as a character string.
 #' @noRd
-cached_fetch <- function(url, use_cache = FALSE, max_age_hours = 24) {
+cached_fetch <- function(url, use_cache = FALSE, max_age_hours = 24,
+                         extra_headers = NULL, validate = NULL) {
+  is_valid <- function(html) {
+    if (is.null(validate)) return(TRUE)
+    isTRUE(tryCatch(validate(html), error = function(e) FALSE))
+  }
+
   if (use_cache) {
     cached <- cache_get(url, max_age_hours = max_age_hours)
-    if (!is.null(cached)) {
+    if (!is.null(cached) && is_valid(cached)) {
       cli::cli_alert_info("Using cached response for {.url {url}}")
       return(cached)
     }
   }
 
-  html <- httr2::request(url) |>
+  req <- httr2::request(url) |>
     httr2::req_headers(`User-Agent` = user_agent_string()) |>
-    httr2::req_retry(max_tries = 3) |>
-    httr2::req_perform() |>
-    httr2::resp_body_string()
+    httr2::req_retry(max_tries = 3)
+  if (length(extra_headers) > 0) {
+    req <- do.call(httr2::req_headers, c(list(req), as.list(extra_headers)))
+  }
+  html <- req |> httr2::req_perform() |> httr2::resp_body_string()
+
+  if (!is_valid(html)) {
+    stop("Response failed validation (likely a bot challenge)", call. = FALSE)
+  }
 
   if (use_cache) {
     cache_set(url, html)

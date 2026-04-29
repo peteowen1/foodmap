@@ -74,7 +74,8 @@ CUISINE_NAMES <- c(
 valid_sources <- function() {
   c("broadsheet", "gourmet_traveller", "timeout", "urban_list", "agfg",
     "good_food_guide", "gfg_awards", "concrete_playground",
-    "infatuation", "eater", "7x7", "cn_traveler", "james_beard")
+    "infatuation", "eater", "7x7", "cn_traveler", "james_beard",
+    "michelin")
 }
 
 #' Cities supported by a given source
@@ -95,6 +96,7 @@ supported_cities_for_source <- function(source) {
     `7x7`               = "san-francisco",
     cn_traveler         = "san-francisco",
     james_beard         = "san-francisco",
+    michelin            = "san-francisco",
     cli::cli_abort("Unknown source: {.val {source}}")
   )
 }

@@ -21,11 +21,13 @@ harmonize_sources <- function(data) {
   }
 
   data |>
-    # Fill GFG hats into rating where rating is missing
+    # Fill source-specific extras to NA when absent so case_when can
+    # reference them safely below.
     dplyr::mutate(
       hats = if ("hats" %in% names(data)) .data$hats else NA_real_,
       cost_range = if ("cost_range" %in% names(data)) .data$cost_range else NA_character_,
-      review_date = if ("review_date" %in% names(data)) .data$review_date else NA_character_
+      review_date = if ("review_date" %in% names(data)) .data$review_date else NA_character_,
+      michelin_distinction = if ("michelin_distinction" %in% names(data)) .data$michelin_distinction else NA_character_
     ) |>
     # Build human-readable labels
     dplyr::mutate(
@@ -35,8 +37,13 @@ harmonize_sources <- function(data) {
         !is.na(.data$price_range) ~ price_to_bracket(.data$price_range),
         TRUE ~ NA_character_
       ),
-      rating_label = format_rating_label(
-        .data$rating, .data$rating_scale, .data$hats, .data$source
+      rating_label = dplyr::case_when(
+        # Michelin distinction wins when present — it's the recognisable
+        # award for those venues, even if they also got a /20 from GFG.
+        !is.na(.data$michelin_distinction) ~ paste0("Michelin: ", .data$michelin_distinction),
+        TRUE ~ format_rating_label(
+          .data$rating, .data$rating_scale, .data$hats, .data$source
+        )
       )
     ) |>
     # Select final columns in a useful order. `n_sources` is added by
@@ -49,7 +56,7 @@ harmonize_sources <- function(data) {
       "price_range", "price_label", "cost_bracket",
       "rating", "rating_scale", "rating_label",
       "hats", "review_date",
-      dplyr::any_of("n_sources")
+      dplyr::any_of(c("n_sources", "michelin_distinction", "michelin_year"))
     )
 }
 

@@ -6,7 +6,9 @@
 #' @param city Character. City to scrape. Default `"sydney"`.
 #' @param source Character. Source to scrape from. One of `"broadsheet"`,
 #'   `"gourmet_traveller"`, `"timeout"`, `"urban_list"`, `"agfg"`,
-#'   `"good_food_guide"`, `"gfg_awards"`. Default `"broadsheet"`.
+#'   `"good_food_guide"`, `"gfg_awards"`, `"concrete_playground"`,
+#'   `"infatuation"`, `"eater"`, `"7x7"`, `"cn_traveler"`,
+#'   `"james_beard"`, `"michelin"`. Default `"broadsheet"`.
 #' @param use_chromote Logical. Force headless Chrome rendering where applicable.
 #'   Default `FALSE`.
 #' @param use_cache Logical. If `TRUE`, cache HTTP responses locally to avoid
@@ -37,7 +39,8 @@ scrape_restaurants <- function(city = "sydney",
     eater             = scrape_eater(city, use_cache = use_cache),
     `7x7`             = scrape_7x7(city, use_cache = use_cache),
     cn_traveler       = scrape_cn_traveler(city, use_cache = use_cache),
-    james_beard       = scrape_james_beard(city)
+    james_beard       = scrape_james_beard(city),
+    michelin          = scrape_michelin(city, use_cache = use_cache)
   )
 }
 

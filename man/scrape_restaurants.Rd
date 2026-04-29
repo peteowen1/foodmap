@@ -16,7 +16,9 @@ scrape_restaurants(
 
 \item{source}{Character. Source to scrape from. One of \code{"broadsheet"},
 \code{"gourmet_traveller"}, \code{"timeout"}, \code{"urban_list"}, \code{"agfg"},
-\code{"good_food_guide"}, \code{"gfg_awards"}. Default \code{"broadsheet"}.}
+\code{"good_food_guide"}, \code{"gfg_awards"}, \code{"concrete_playground"},
+\code{"infatuation"}, \code{"eater"}, \code{"7x7"}, \code{"cn_traveler"},
+\code{"james_beard"}, \code{"michelin"}. Default \code{"broadsheet"}.}
 
 \item{use_chromote}{Logical. Force headless Chrome rendering where applicable.
 Default \code{FALSE}.}
