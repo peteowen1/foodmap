@@ -16,6 +16,24 @@ test_that("build_geocode_query handles empty strings", {
   expect_equal(build_geocode_query("Aria", ""), "Aria Australia")
 })
 
+test_that("build_geocode_query uses US label when country='US'", {
+  expect_equal(
+    build_geocode_query("Tartine", "San Francisco", country = "US"),
+    "Tartine San Francisco United States"
+  )
+})
+
+test_that("build_geocode_query drops country label when unknown", {
+  expect_equal(
+    build_geocode_query("Foo", "Bar", country = "XX"),
+    "Foo Bar"
+  )
+  expect_equal(
+    build_geocode_query("Foo", "Bar", country = NULL),
+    "Foo Bar"
+  )
+})
+
 test_that("ensure_geocode_cols adds missing columns", {
   df <- tibble::tibble(name = "test", latitude = 1.0)
   result <- ensure_geocode_cols(df)

@@ -57,7 +57,7 @@ geocode_restaurants <- function(restaurants,
 
   for (i in idx) {
     row <- restaurants[i, ]
-    query <- build_geocode_query(row$name, row$suburb, row$address)
+    query <- build_geocode_query(row$name, row$suburb, row$address, country)
 
     result <- places_text_search(query, api_key, country = country)
 
@@ -192,11 +192,30 @@ ensure_geocode_cols <- function(df) {
 #' Erskineville Newtown" picks the right venue). Address is allowed to
 #' contradict suburb because guides routinely disagree on which suburb
 #' a boundary venue belongs to.
+#'
+#' The country *name* is appended to the query text (in addition to the
+#' API-side `regionCode`/bbox bias) because Places gives noticeable
+#' weight to the textual signal. Without it, an SF venue's query like
+#' "Tartine 600 Guerrero St San Francisco" can lose to a same-named AU
+#' venue, even with a US bbox set, because the text doesn't disambiguate.
 #' @noRd
-build_geocode_query <- function(name, suburb, address = NA_character_) {
-  parts <- c(name, address, suburb, "Australia")
+build_geocode_query <- function(name, suburb, address = NA_character_,
+                                country = "AU") {
+  parts <- c(name, address, suburb, country_query_label(country))
   parts <- parts[!is.na(parts) & nchar(parts) > 0]
   paste(parts, collapse = " ")
+}
+
+#' Country code -> human-readable name for inclusion in geocode queries
+#' @noRd
+country_query_label <- function(country) {
+  if (is.null(country) || is.na(country)) return(NA_character_)
+  switch(country,
+    AU = "Australia",
+    US = "United States",
+    GB = "United Kingdom",
+    NA_character_
+  )
 }
 
 #' Call Google Places API (New) Text Search

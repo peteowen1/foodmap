@@ -158,8 +158,11 @@ infatuation_row_from_ld <- function(item) {
     price_range  = as.integer(price_range),
     rating       = NA_real_,
     rating_scale = NA_character_,
-    latitude     = suppressWarnings(as.numeric(geo$latitude)),
-    longitude    = suppressWarnings(as.numeric(geo$longitude)),
+    # Guard against NULL geo fields - as.numeric(NULL) returns
+    # numeric(0), which would recycle the whole row out of existence
+    # under tibble's column-length rule.
+    latitude     = suppressWarnings(as.numeric(geo$latitude %||% NA_real_)),
+    longitude    = suppressWarnings(as.numeric(geo$longitude %||% NA_real_)),
     url          = item$url %||% NA_character_
   )
 }

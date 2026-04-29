@@ -146,14 +146,24 @@ extract_venues_from_rsc <- function(html_text) {
     return(list())
   }
 
-  # Concatenate all payload strings (unescape the JS string escapes)
+  # Concatenate all payload strings, then let jsonlite handle the
+  # unescape. Each captured payload is the *content* of a JS string
+  # literal (no surrounding quotes), so wrap it in `"..."` and parse.
+  # This is more robust than chained gsubs, which got the order wrong
+  # for sequences like `\\\"` (escaped backslash + escaped quote).
   payloads <- matches[, 2]
   combined <- paste(payloads, collapse = "")
-  # Unescape JS string: \" -> ", \\ -> \, \n -> newline, etc.
-  combined <- gsub('\\\\"', '"', combined)
-  combined <- gsub('\\\\n', '\n', combined)
-  combined <- gsub('\\\\t', '\t', combined)
-  combined <- gsub('\\\\\\\\', '\\\\', combined)
+  combined <- tryCatch(
+    jsonlite::fromJSON(paste0('"', combined, '"')),
+    error = function(e) {
+      # Fall back to the previous chained-gsub unescape if the wrapped
+      # parse fails (e.g. a stray bare backslash that's invalid JSON).
+      x <- gsub('\\\\"', '"', combined)
+      x <- gsub('\\\\n', '\n', x)
+      x <- gsub('\\\\t', '\t', x)
+      gsub('\\\\\\\\', '\\\\', x)
+    }
+  )
 
   # Strategy 1: Find "venues":[ and extract the full array using bracket counting
   # (regex can't handle nested brackets in cuisine[], primary_address[], etc.)
@@ -182,7 +192,12 @@ extract_venues_from_rsc <- function(html_text) {
     }
   }
 
-  # Strategy 2: Fallback — individual objects containing profile_id + title
+  # Strategy 2: Fallback — individual objects containing profile_id + title.
+  # Note: `[^}]*?` cannot match across nested `{...}`, so venues whose
+  # serialization places `primary_address: {...}` (or any object) between
+  # `profile_id` and `title` will not be matched. This fallback is a
+  # defence-in-depth fishhook; in practice Strategy 1 (bracket counting
+  # over the full venues array) catches everything.
   if (length(all_venues) == 0) {
     obj_pattern <- '\\{"profile_id"\\s*:\\s*(?:\\d+|null)[^}]*?"title"\\s*:[^}]*?\\}'
     obj_matches <- stringr::str_extract_all(combined, obj_pattern)[[1]]
