@@ -50,7 +50,7 @@ cache_path <- function(url, cache_dir = "cache") {
 #'   discarded and a fresh fetch is attempted, fresh fetches throw
 #'   an error and are *not* written to cache. Use this to reject bot
 #'   challenges (e.g. AWS WAF) that return HTTP 200 with placeholder
-#'   bodies — without validation those poison the cache permanently.
+#'   bodies -- without validation those poison the cache permanently.
 #' @return HTML response body as a character string.
 #' @noRd
 cached_fetch <- function(url, use_cache = FALSE, max_age_hours = 24,

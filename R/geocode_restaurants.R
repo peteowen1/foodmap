@@ -1,7 +1,7 @@
 #' Geocode restaurants via Google Places API
 #'
 #' For rows missing latitude/longitude, queries the Google Places API (New)
-#' Text Search to resolve coordinates. Safe to re-run — skips rows that
+#' Text Search to resolve coordinates. Safe to re-run -- skips rows that
 #' already have coordinates and reuses prior results from a local cache.
 #'
 #' @param restaurants A tibble as returned by [scrape_broadsheet()].
@@ -34,7 +34,7 @@ geocode_restaurants <- function(restaurants,
 
   restaurants <- ensure_geocode_cols(restaurants)
 
-  # Step 1 — fill in coordinates from the on-disk cache (unless overridden)
+  # Step 1 -- fill in coordinates from the on-disk cache (unless overridden)
   if (!is.null(cache_path) && !force_refresh && file.exists(cache_path)) {
     restaurants <- geocode_cache_apply(restaurants, cache_path, country)
   }
@@ -81,7 +81,7 @@ geocode_restaurants <- function(restaurants,
     cli::cli_warn("{n_missing} venue{?s} could not be geocoded")
   }
 
-  # Step 3 — persist the (now expanded) coordinate set to the cache
+  # Step 3 -- persist the (now expanded) coordinate set to the cache
   if (!is.null(cache_path)) geocode_cache_write(restaurants, cache_path)
 
   restaurants

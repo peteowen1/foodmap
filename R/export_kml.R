@@ -1,7 +1,7 @@
 #' KML pin style colors by source
 #' @noRd
 source_style_id <- function(source) {
-  # Google Earth/Maps KML icon colors (aabbggrr format — alpha, blue, green, red)
+  # Google Earth/Maps KML icon colors (aabbggrr format -- alpha, blue, green, red)
   styles <- c(
     broadsheet        = "ff0000ff",  # red
     gourmet_traveller = "ff00aa00",  # green

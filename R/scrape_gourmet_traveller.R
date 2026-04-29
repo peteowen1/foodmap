@@ -1,7 +1,7 @@
 #' Scrape Gourmet Traveller restaurant guide
 #'
 #' Fetches the Gourmet Traveller best restaurants list for a given city.
-#' Uses static HTML parsing via rvest — no JavaScript rendering needed.
+#' Uses static HTML parsing via rvest -- no JavaScript rendering needed.
 #'
 #' @param city Character. One of "sydney", "melbourne". Default `"sydney"`.
 #' @param use_cache Logical. Use cached HTTP responses if available. Default `FALSE`.
@@ -98,7 +98,7 @@ gt_parse_item <- function(item, city) {
     NA_character_
   }
 
-  # Description — try listicle content first, then generic <p>
+  # Description -- try listicle content first, then generic <p>
   desc <- rvest::html_element(item, ".listicle-item__content > p") |>
     rvest::html_text2()
   if (is.na(desc)) {

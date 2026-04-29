@@ -1,7 +1,7 @@
 #' Scrape Time Out best restaurants list
 #'
 #' Fetches the Time Out best restaurants list for a given city.
-#' Uses static HTML parsing via rvest — no JavaScript rendering needed.
+#' Uses static HTML parsing via rvest -- no JavaScript rendering needed.
 #'
 #' @param city Character. One of "sydney", "melbourne". Default `"sydney"`.
 #' @param use_cache Logical. Use cached HTTP responses if available. Default `FALSE`.
@@ -130,7 +130,7 @@ timeout_parse_card <- function(card, city) {
     NA_real_
   }
 
-  # Plain text tags (cuisine / suburb — not structurally distinguishable)
+  # Plain text tags (cuisine / suburb -- not structurally distinguishable)
   plain_tags <- rvest::html_elements(card, "section[data-testid='tags_testID'] li") |>
     purrr::keep(function(li) {
       # Only plain tags (no data-testid children like star-rating, price-rating)

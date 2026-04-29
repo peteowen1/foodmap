@@ -16,7 +16,7 @@ scrape_urban_list <- function(city = "sydney", use_cache = FALSE) {
   url <- urban_list_url(city)
   cli::cli_alert_info("Fetching {.url {url}}")
 
-  # Urban List may be behind Cloudflare — check status before parsing
+  # Urban List may be behind Cloudflare -- check status before parsing
   if (use_cache) {
     cached <- cache_get(url)
     if (!is.null(cached)) {
@@ -115,7 +115,7 @@ urban_list_parse_content <- function(content, city) {
         NA_character_
       }
 
-      # Extract suburb from address — take the last comma-part that
+      # Extract suburb from address -- take the last comma-part that
 
       # doesn't look like a postcode (all digits) or state abbreviation
       suburb <- if (nchar(address) > 0) {

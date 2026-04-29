@@ -123,7 +123,7 @@ agfg_fetch_all_listings <- function(state, use_cache = FALSE) {
   }
   max_page <- max_page %||% 1L
 
-  # Parse initial table rows — awards page uses <tr> with <td> cells
+  # Parse initial table rows -- awards page uses <tr> with <td> cells
   all_rows <- rvest::html_elements(page, "tr") |>
     purrr::keep(function(tr) {
       # Only keep rows containing a restaurant link
@@ -246,7 +246,7 @@ agfg_parse_row <- function(tr) {
   if (!is.na(suburb) && nchar(suburb) == 0) suburb <- NA_character_
   if (!is.na(cuisine) && nchar(cuisine) == 0) cuisine <- NA_character_
 
-  # Chef hat score from award image filename (e.g., /awards/19.png → 19)
+  # Chef hat score from award image filename (e.g., /awards/19.png -> 19)
   award_img <- rvest::html_element(tr, "img[src*='/awards/']") |>
     rvest::html_attr("src")
   rating <- if (!is.na(award_img)) {

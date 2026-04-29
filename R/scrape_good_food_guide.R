@@ -238,7 +238,7 @@ gfg_fetch_detail <- function(url, use_cache = FALSE) {
 
   description <- article_data$description %||% NA_character_
 
-  # Suburb from breadcrumb (last item) or first keyword — extract before name
+  # Suburb from breadcrumb (last item) or first keyword -- extract before name
   suburb <- NA_character_
   if (!is.null(breadcrumb_data)) {
     items <- breadcrumb_data$itemListElement
@@ -261,7 +261,7 @@ gfg_fetch_detail <- function(url, use_cache = FALSE) {
   # Convert to character for tibble consistency
   review_date <- as.character(review_date)
 
-  # Score with .5 precision — pattern: "15.5\n/20" or "15\n/20"
+  # Score with .5 precision -- pattern: "15.5\n/20" or "15\n/20"
   score_match <- stringr::str_extract(page_text, "\\d{1,2}(?:\\.5)?(?=\\s*/\\s*20)")
   rating <- if (!is.na(score_match)) as.double(score_match) else NA_real_
 
@@ -320,7 +320,7 @@ gfg_fetch_detail <- function(url, use_cache = FALSE) {
     NA_character_
   }
 
-  # Website URL — extract from page text after "Website" label
+  # Website URL -- extract from page text after "Website" label
   website <- stringr::str_extract(page_text, "(?<=Website\\s{0,5}\n{1,3})(https?://[^\\s\\n]+)") %||%
     NA_character_
 

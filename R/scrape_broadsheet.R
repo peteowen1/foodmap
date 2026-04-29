@@ -192,7 +192,7 @@ extract_venues_from_rsc <- function(html_text) {
     }
   }
 
-  # Strategy 2: Fallback — individual objects containing profile_id + title.
+  # Strategy 2: Fallback -- individual objects containing profile_id + title.
   # Note: `[^}]*?` cannot match across nested `{...}`, so venues whose
   # serialization places `primary_address: {...}` (or any object) between
   # `profile_id` and `title` will not be matched. This fallback is a

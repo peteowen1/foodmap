@@ -5,7 +5,7 @@
 #' Each map page embeds the venue payload as inline JSON inside the
 #' article HTML (one block per venue with `location.latitude`,
 #' `location.longitude`, `name`, `venue.address`). We pull those out
-#' with a couple of regexes — no per-venue detail fetch needed.
+#' with a couple of regexes -- no per-venue detail fetch needed.
 #'
 #' By default the scraper hits the city's flagship "Essential 38" /
 #' "best restaurants" guide. Pass additional map slugs via
@@ -135,7 +135,7 @@ eater_parse_guide <- function(html_str) {
 #' Extract the suburb (city/neighborhood) from an Eater address string
 #'
 #' Eater addresses look like "2700 Jones St, San Francisco, CA, 94133, US".
-#' We return the second-to-last comma section before the state — which
+#' We return the second-to-last comma section before the state -- which
 #' is typically the city or neighborhood (e.g. "Presidio" for Dalida,
 #' "San Francisco" for most). Heuristic but robust for SF data.
 #' @noRd

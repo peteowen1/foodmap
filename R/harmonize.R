@@ -57,7 +57,7 @@ harmonize_sources <- function(data) {
         TRUE ~ NA_character_
       ),
       rating_label = dplyr::case_when(
-        # Michelin distinction wins when present — it's the recognisable
+        # Michelin distinction wins when present -- it's the recognisable
         # award for those venues, even if they also got a /20 from GFG.
         !is.na(.data$michelin_distinction) ~ paste0("Michelin: ", .data$michelin_distinction),
         TRUE ~ format_rating_label(

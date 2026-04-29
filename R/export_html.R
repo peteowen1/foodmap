@@ -332,11 +332,11 @@ filter_panel_html <- function(tier_order, all_sources, all_cuisines = character(
   price_order <- c("$", "$$", "$$$", "$$$$", "?")
   price_bins_sorted <- price_order[price_order %in% price_bins]
   price_label_for <- list(
-    "$"    = "$ — budget",
-    "$$"   = "$$ — moderate",
-    "$$$"  = "$$$ — special occasion",
-    "$$$$" = "$$$$ — premium",
-    "?"    = "? — unknown"
+    "$"    = "$ \u2014 budget",
+    "$$"   = "$$ \u2014 moderate",
+    "$$$"  = "$$$ \u2014 special occasion",
+    "$$$$" = "$$$$ \u2014 premium",
+    "?"    = "? \u2014 unknown"
   )
   price_rows <- vapply(price_bins_sorted, function(b) {
     sprintf(

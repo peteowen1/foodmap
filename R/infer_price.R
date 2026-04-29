@@ -1,7 +1,7 @@
 # Rule-based price inference for venues that no source reported a price
 # for. Always sets a `price_inferred` boolean so downstream consumers
 # (popup labels, filters) can distinguish source-reported from
-# rule-filled values. Rules are deterministic — same input always
+# rule-filled values. Rules are deterministic -- same input always
 # produces the same output, no model calls or stochastic guesses.
 
 
@@ -27,7 +27,7 @@
 #' }
 #'
 #' Michelin Selected venues without a `priceRange` field deliberately
-#' don't get an inferred price — Selected covers a huge spread (cheap
+#' don't get an inferred price -- Selected covers a huge spread (cheap
 #' Filipino takeaway alongside upmarket bistros) and any single value
 #' would be misleading.
 #'
@@ -82,7 +82,7 @@ infer_missing_price <- function(restaurants) {
   )
   apply_rule(
     grepl(
-      "\\b(cafe|café|deli|bakery|takeaway|sandwich(es)?|noodle bar|juice bar|cake shop|food truck)\\b",
+      "\\b(cafe|caf\u00e9|deli|bakery|takeaway|sandwich(es)?|noodle bar|juice bar|cake shop|food truck)\\b",
       cuisine_low
     ),
     1L

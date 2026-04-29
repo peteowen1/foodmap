@@ -10,7 +10,7 @@ MICHELIN_RATE_SECS <- 1.0
 
 #' Validator for a Michelin detail-page response
 #'
-#' Returns `TRUE` only if the body looks like a real venue page —
+#' Returns `TRUE` only if the body looks like a real venue page --
 #' contains a `Restaurant` JSON-LD block and is not the AWS WAF
 #' challenge HTML. Used by `cached_fetch()` to refuse poisoned
 #' cache hits and decline to cache fresh WAF responses.
@@ -23,7 +23,7 @@ michelin_response_ok <- function(html) {
 
 #' Scrape the Michelin Guide
 #'
-#' Pulls the full restaurant set for a city — every tier from Selected
+#' Pulls the full restaurant set for a city -- every tier from Selected
 #' through Bib Gourmand and One/Two/Three Stars. The listing pages are
 #' server-rendered HTML with a flat link-card layout, and detail pages
 #' embed a clean `Restaurant` JSON-LD block (address, latitude/longitude,
@@ -34,7 +34,7 @@ michelin_response_ok <- function(html) {
 #' bare User-Agent (HTTP 202 with empty body), so the scraper layers in
 #' `Accept`, `Accept-Language`, and `Referer` headers. The Guide
 #' refreshes annually, so caching defaults to 30 days rather than the
-#' usual 24 hours — re-running with `use_cache = TRUE` finishes in
+#' usual 24 hours -- re-running with `use_cache = TRUE` finishes in
 #' seconds and never re-fetches.
 #'
 #' @param city Character. Lowercase city slug. Currently supported:
@@ -141,7 +141,7 @@ michelin_listing_url <- function(city) {
 #' and states (e.g. New York from the SF listing). Without filtering,
 #' those leak into our discovered URL set and get scraped as if they
 #' belonged to the city. Each city resolves to the path prefix we keep
-#' — for SF that's the whole California region, since the SF Michelin
+#' -- for SF that's the whole California region, since the SF Michelin
 #' Guide legitimately covers Bay Area satellites (Berkeley, Oakland,
 #' Healdsburg, etc.).
 #' @noRd
