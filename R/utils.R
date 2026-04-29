@@ -46,6 +46,13 @@ xml_escape <- function(x) {
 }
 
 #' Format a price range integer (1-4) as dollar signs
+#'
+#' Returns `""` for `NA` / `0` so callers building text with
+#' `nchar(x) > 0` checks (KML / CSV exports) can suppress empty price
+#' lines. The harmonize-layer counterpart `format_price_label()`
+#' returns `NA_character_` instead - use that one when feeding
+#' `dplyr::case_when()` or other tibble pipelines that want missing
+#' prices to stay missing.
 #' @noRd
 format_price <- function(price_range) {
   ifelse(

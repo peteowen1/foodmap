@@ -159,8 +159,10 @@ deduplicate_restaurants <- function(restaurants) {
 
     subset <- restaurants[idx, ]
 
-    # Count non-NA values per row to find the "richest"
-    richness <- apply(subset, 1, function(r) sum(!is.na(r)))
+    # Count non-NA values per row to find the "richest". rowSums on a
+    # logical matrix is much faster than apply() and avoids tibble->matrix
+    # coercion to character that apply() would otherwise force.
+    richness <- rowSums(!is.na(subset))
     best_idx <- which.max(richness)
     merged_row <- subset[best_idx, ]
 

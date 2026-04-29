@@ -1,3 +1,26 @@
+#' Per-request pause for Michelin Guide scraping
+#'
+#' Michelin's AWS WAF will start serving bot-challenge pages (HTTP 200
+#' bodies of ~2 KB containing `AwsWafIntegration`) once it sees more
+#' than ~2 requests per second sustained. 1 second between requests
+#' stays comfortably under the threshold.
+#' @noRd
+MICHELIN_RATE_SECS <- 1.0
+
+
+#' Validator for a Michelin detail-page response
+#'
+#' Returns `TRUE` only if the body looks like a real venue page —
+#' contains a `Restaurant` JSON-LD block and is not the AWS WAF
+#' challenge HTML. Used by `cached_fetch()` to refuse poisoned
+#' cache hits and decline to cache fresh WAF responses.
+#' @noRd
+michelin_response_ok <- function(html) {
+  !grepl("AwsWafIntegration", html, fixed = TRUE) &&
+    grepl('"@type":"Restaurant"', html, fixed = TRUE)
+}
+
+
 #' Scrape the Michelin Guide
 #'
 #' Pulls the full restaurant set for a city — every tier from Selected
@@ -101,29 +124,6 @@ scrape_michelin <- function(city = "san-francisco",
 }
 
 
-#' Per-request pause for Michelin Guide scraping
-#'
-#' Michelin's AWS WAF will start serving bot-challenge pages (HTTP 200
-#' bodies of ~2 KB containing `AwsWafIntegration`) once it sees more
-#' than ~2 requests per second sustained. 1 second between requests
-#' stays comfortably under the threshold.
-#' @noRd
-MICHELIN_RATE_SECS <- 1.0
-
-
-#' Validator for a Michelin detail-page response
-#'
-#' Returns `TRUE` only if the body looks like a real venue page —
-#' contains a `Restaurant` JSON-LD block and is not the AWS WAF
-#' challenge HTML. Used by `cached_fetch()` to refuse poisoned
-#' cache hits and decline to cache fresh WAF responses.
-#' @noRd
-michelin_response_ok <- function(html) {
-  !grepl("AwsWafIntegration", html, fixed = TRUE) &&
-    grepl('"@type":"Restaurant"', html, fixed = TRUE)
-}
-
-
 #' City -> Michelin Guide listing URL
 #' @noRd
 michelin_listing_url <- function(city) {
@@ -206,7 +206,12 @@ michelin_collect_detail_urls <- function(base_url, url_prefix,
     detail_urls <- unique(c(detail_urls, new_urls))
     prev_url <- page_url
     page <- page + 1L
-    if (page > 25L) break
+    if (page > 25L) {
+      cli::cli_warn(
+        "Hit 25-page hard cap on Michelin listing pagination - some venues may be missed."
+      )
+      break
+    }
     Sys.sleep(MICHELIN_RATE_SECS)
   }
   detail_urls

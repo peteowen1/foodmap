@@ -242,14 +242,15 @@ timeout_extract_jsonld <- function(page) {
       cuisine <- item[["servesCuisine"]]
       if (is.list(cuisine)) cuisine <- paste(unlist(cuisine), collapse = ", ")
 
-      # Address
+      # Address. `c()` already drops NULL elements, so any of street /
+      # suburb / postcode being NULL is fine; we only short-circuit the
+      # whole address when there's no street to anchor it.
       addr <- item[["address"]]
       suburb <- addr[["addressLocality"]]
       street <- addr[["streetAddress"]]
       postcode <- addr[["postalCode"]]
       full_address <- if (!is.null(street)) {
-        parts <- c(street, suburb, postcode)
-        paste(parts[!is.null(parts)], collapse = ", ")
+        paste(c(street, suburb, postcode), collapse = ", ")
       } else {
         NA_character_
       }

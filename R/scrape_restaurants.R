@@ -25,6 +25,9 @@ scrape_restaurants <- function(city = "sydney",
   source <- match.arg(source, valid_sources())
   city <- validate_city_source(city, source)
 
+  # gfg_awards and james_beard read from in-memory hand-curated lists
+  # rather than HTTP, so use_cache is intentionally not passed - there's
+  # nothing to cache.
   switch(source,
     broadsheet        = scrape_broadsheet(city, use_chromote = use_chromote,
                                           use_cache = use_cache),
@@ -40,7 +43,8 @@ scrape_restaurants <- function(city = "sydney",
     `7x7`             = scrape_7x7(city, use_cache = use_cache),
     cn_traveler       = scrape_cn_traveler(city, use_cache = use_cache),
     james_beard       = scrape_james_beard(city),
-    michelin          = scrape_michelin(city, use_cache = use_cache)
+    michelin          = scrape_michelin(city, use_cache = use_cache),
+    cli::cli_abort("Internal: dispatcher missing case for {.val {source}}")
   )
 }
 

@@ -77,7 +77,9 @@ cached_fetch <- function(url, use_cache = FALSE, max_age_hours = 24,
   html <- req |> httr2::req_perform() |> httr2::resp_body_string()
 
   if (!is_valid(html)) {
-    stop("Response failed validation (likely a bot challenge)", call. = FALSE)
+    cli::cli_abort(
+      "Response from {.url {url}} failed validation (likely a bot challenge)"
+    )
   }
 
   if (use_cache) {

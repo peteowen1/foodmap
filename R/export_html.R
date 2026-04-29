@@ -51,9 +51,8 @@ export_html <- function(restaurants,
   }
 
   # Tier classification feeds both pin colour and the legend.
-  # If n_sources isn't already on the data (e.g. loaded from an older
-  # CSV that pre-dates harmonize_sources keeping it), derive it from
-  # the source column.
+  # harmonize_sources() guarantees n_sources, but tolerate raw input
+  # too (older CSVs, callers that skip harmonize entirely).
   hats_col <- if ("hats" %in% names(geo)) geo$hats else NA_integer_
   ns_col   <- if ("n_sources" %in% names(geo)) {
     geo$n_sources

@@ -50,13 +50,16 @@ infer_missing_price <- function(restaurants) {
   inferred <- rep(FALSE, nrow(restaurants))
   needs <- is.na(pr)
 
-  cuisine_low <- tolower(restaurants$cuisine %||% rep(NA_character_, nrow(restaurants)))
-  desc_low    <- tolower(restaurants$description %||% rep(NA_character_, nrow(restaurants)))
-  mich        <- if ("michelin_distinction" %in% names(restaurants)) {
-    restaurants$michelin_distinction
-  } else {
-    rep(NA_character_, nrow(restaurants))
+  # Use names()-based checks for all three optional columns rather than
+  # `$` + `%||%`, since tibble's $ access on a missing column emits an
+  # "Unknown or uninitialised column" warning before %||% can fire.
+  col_or_na <- function(col) {
+    if (col %in% names(restaurants)) restaurants[[col]]
+    else rep(NA_character_, nrow(restaurants))
   }
+  cuisine_low <- tolower(col_or_na("cuisine"))
+  desc_low    <- tolower(col_or_na("description"))
+  mich        <- col_or_na("michelin_distinction")
 
   # Rule application helper - applies `value` to rows where `mask` is
   # TRUE and the venue still needs a price, then marks them inferred.

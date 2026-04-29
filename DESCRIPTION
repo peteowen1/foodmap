@@ -2,9 +2,12 @@ Package: foodmap
 Title: Map Australia's Best Restaurants from Multiple Guides
 Version: 0.3.0
 Authors@R: person("Peter", "Owen", email = "peter@bzi.com.au", role = c("aut", "cre"))
-Description: Scrapes restaurant guides (Broadsheet, Gourmet Traveller, Time Out,
-    AGFG, Urban List, Good Food Guide), geocodes venues via the Google Places API,
-    and exports KML files for import into Google My Maps.
+Description: Scrapes Australian and US restaurant guides (Broadsheet,
+    Gourmet Traveller, Time Out, AGFG, Urban List, Good Food Guide,
+    SMH GFG awards, Concrete Playground, The Infatuation, Eater, 7x7,
+    Conde Nast Traveler, James Beard Awards, Michelin Guide), geocodes
+    venues via the Google Places API, and exports KML, CSV, and
+    interactive Leaflet HTML files.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

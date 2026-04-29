@@ -20,6 +20,18 @@ harmonize_sources <- function(data) {
     cli::cli_abort("{.arg data} must have a {.field source} column.")
   }
 
+  # Synthesise n_sources when absent (e.g. caller passed raw scraper
+  # output, not a deduped tibble). Done up front so any consumer that
+  # reads the harmonized output - export_html(), filters, downstream
+  # analytics - can rely on the column existing.
+  if (!"n_sources" %in% names(data)) {
+    data$n_sources <- vapply(
+      strsplit(data$source %||% NA_character_, ",\\s*"),
+      function(parts) length(parts[!is.na(parts) & nzchar(parts)]),
+      integer(1)
+    )
+  }
+
   data |>
     # Fill source-specific extras to NA when absent so case_when can
     # reference them safely below.
@@ -68,7 +80,12 @@ harmonize_sources <- function(data) {
 }
 
 
-#' Format price_range integer (1-5) as dollar signs
+#' Format price_range integer (1-5) as dollar signs, NA-preserving
+#'
+#' Tibble-friendly counterpart of `format_price()` in utils.R. Same
+#' shape, different NA convention: returns `NA_character_` so
+#' downstream `dplyr::case_when()` chains can keep missing prices
+#' missing rather than coercing them to `""`.
 #' @noRd
 format_price_label <- function(price_range) {
   dplyr::case_when(

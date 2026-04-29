@@ -35,16 +35,17 @@ city_country <- function(city) {
     city
   )
 
+  # Only cities with at least one supported scraper are listed.
+  # When a new city ships with its first scraper, add it here so
+  # geocoding picks the right country bias.
   au_cities <- c("sydney", "melbourne", "brisbane", "adelaide", "perth",
                  "hobart", "canberra", "darwin", "gold-coast")
-  us_cities <- c("san-francisco", "new-york", "los-angeles", "chicago",
-                 "miami", "austin", "seattle", "boston", "atlanta",
-                 "washington-dc", "philadelphia", "portland")
-  uk_cities <- c("london", "manchester", "edinburgh")
+  us_cities <- c("san-francisco")
+  uk_cities <- character()
 
   if (city %in% au_cities) return("AU")
   if (city %in% us_cities) return("US")
-  if (city %in% uk_cities) return("GB")
+  if (length(uk_cities) > 0 && city %in% uk_cities) return("GB")
   NA_character_
 }
 
