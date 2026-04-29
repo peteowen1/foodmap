@@ -27,11 +27,18 @@ harmonize_sources <- function(data) {
       hats = if ("hats" %in% names(data)) .data$hats else NA_real_,
       cost_range = if ("cost_range" %in% names(data)) .data$cost_range else NA_character_,
       review_date = if ("review_date" %in% names(data)) .data$review_date else NA_character_,
-      michelin_distinction = if ("michelin_distinction" %in% names(data)) .data$michelin_distinction else NA_character_
+      michelin_distinction = if ("michelin_distinction" %in% names(data)) .data$michelin_distinction else NA_character_,
+      price_inferred = if ("price_inferred" %in% names(data)) .data$price_inferred else FALSE
     ) |>
-    # Build human-readable labels
+    # Build human-readable labels. price_label gets a "(est.)" suffix
+    # when the price came from rule-based inference rather than a guide,
+    # so popup readers can spot which prices are derived.
     dplyr::mutate(
-      price_label = format_price_label(.data$price_range),
+      price_label = dplyr::case_when(
+        is.na(.data$price_range) ~ NA_character_,
+        .data$price_inferred ~ paste0(format_price_label(.data$price_range), " (est.)"),
+        TRUE ~ format_price_label(.data$price_range)
+      ),
       cost_bracket = dplyr::case_when(
         !is.na(.data$cost_range) ~ .data$cost_range,
         !is.na(.data$price_range) ~ price_to_bracket(.data$price_range),
@@ -53,7 +60,7 @@ harmonize_sources <- function(data) {
     dplyr::select(
       "name", "suburb", "address", "cuisine", "category", "source",
       "description", "url", "latitude", "longitude",
-      "price_range", "price_label", "cost_bracket",
+      "price_range", "price_label", "cost_bracket", "price_inferred",
       "rating", "rating_scale", "rating_label",
       "hats", "review_date",
       dplyr::any_of(c("n_sources", "michelin_distinction", "michelin_year"))

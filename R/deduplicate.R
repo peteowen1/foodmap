@@ -191,6 +191,19 @@ deduplicate_restaurants <- function(restaurants) {
       merged_row$longitude <- coords$longitude[1]
     }
 
+    # Special handling: integer median price across sources, normalized
+    # to a 1-4 scale (AU sources sometimes use 1-5; cap at 4 so all
+    # cities share the same filter axis). Two-of-three agreement wins;
+    # ties round half-to-even (R's default).
+    if ("price_range" %in% names(subset)) {
+      prices <- subset$price_range[!is.na(subset$price_range)]
+      prices <- prices[prices >= 1L]
+      prices <- pmin(prices, 4L)
+      if (length(prices) > 0) {
+        merged_row$price_range <- as.integer(round(stats::median(prices)))
+      }
+    }
+
     merged_row
   }) |>
     dplyr::bind_rows()

@@ -105,6 +105,16 @@ export_html <- function(restaurants,
                            character(1),
                            geo = geo)
 
+  # Price bin per venue: "$"/"$$"/"$$$"/"$$$$" or "?" for unknown.
+  # Used by the JS-side filter; matches the values in the price filter
+  # checkboxes built by `filter_panel_html()`.
+  price_bin <- if ("price_range" %in% names(geo)) {
+    pr <- geo$price_range
+    ifelse(is.na(pr) | pr < 1L, "?", strrep("$", pmin(pmax(pr, 1L), 4L)))
+  } else {
+    rep("?", nrow(geo))
+  }
+
   # Marker payload for JS - kept lean (popup HTML is the heaviest field)
   marker_records <- lapply(seq_len(nrow(geo)), function(i) {
     list(
@@ -115,6 +125,7 @@ export_html <- function(restaurants,
       popup     = geo$popup_html[i],
       color     = geo$pin_color[i],
       tier      = geo$tier[i],
+      price     = price_bin[i],
       n_sources = length(sources_split[[i]]),
       # I() prevents jsonlite::toJSON(auto_unbox = TRUE) from collapsing
       # a length-1 character vector into a bare string (which would
@@ -144,7 +155,10 @@ export_html <- function(restaurants,
       lng2 = bbox$lng_max, lat2 = bbox$lat_max
     ) |>
     leaflet::addControl(
-      html     = filter_panel_html(tier_order, all_sources, all_cuisines),
+      html     = filter_panel_html(
+        tier_order, all_sources, all_cuisines,
+        price_bins = sort(unique(price_bin))
+      ),
       position = "topright",
       className = "foodmap-filter-control"
     ) |>
@@ -229,7 +243,8 @@ build_popup_html <- function(i, geo) {
 #' name search, tier/guide/cuisine checkbox sections (each with all/none
 #' toggles), and a min-selected-guides-matched dropdown.
 #' @noRd
-filter_panel_html <- function(tier_order, all_sources, all_cuisines = character()) {
+filter_panel_html <- function(tier_order, all_sources, all_cuisines = character(),
+                              price_bins = character()) {
   esc <- htmltools::htmlEscape
 
   tier_swatch <- list(
@@ -313,6 +328,30 @@ filter_panel_html <- function(tier_order, all_sources, all_cuisines = character(
     )
   }
 
+  # Price section. Sort bins so cheap-to-expensive: $ < $$ < $$$ < $$$$,
+  # with the unknown-price bucket "?" pinned to the end.
+  price_order <- c("$", "$$", "$$$", "$$$$", "?")
+  price_bins_sorted <- price_order[price_order %in% price_bins]
+  price_label_for <- list(
+    "$"    = "$ — budget",
+    "$$"   = "$$ — moderate",
+    "$$$"  = "$$$ — special occasion",
+    "$$$$" = "$$$$ — premium",
+    "?"    = "? — unknown"
+  )
+  price_rows <- vapply(price_bins_sorted, function(b) {
+    sprintf(
+      paste0("<label style='display:block;cursor:pointer;'>",
+             "<input type='checkbox' class='fm-price' value='%s' checked> ",
+             "%s</label>"),
+      esc(b), esc(price_label_for[[b]] %||% b)
+    )
+  }, character(1))
+
+  price_block <- if (length(price_rows) > 0) {
+    section_html("Price", "fm-price", paste(price_rows, collapse = ""))
+  } else ""
+
   cuisine_block <- if (length(cuisine_rows) > 0) {
     section_html(
       "Cuisine", "fm-cuisine",
@@ -361,6 +400,8 @@ filter_panel_html <- function(tier_order, all_sources, all_cuisines = character(
     "<select id='fm-min-sources' style='font-family:inherit;font-size:12px'>",
     paste(min_options, collapse = ""),
     "</select>",
+    # Price section (only if any prices)
+    price_block,
     # Cuisine section (only if any cuisines)
     cuisine_block,
     "</div>",  # /.fm-body
@@ -425,6 +466,7 @@ function(el, x) {
     marker._fmSources     = asArray(d.sources);
     marker._fmNumSources  = (typeof d.n_sources === 'number') ? d.n_sources : marker._fmSources.length;
     marker._fmCuisines    = asArray(d.cuisines);
+    marker._fmPrice       = d.price || '?';
     return marker;
   });
 
@@ -448,6 +490,7 @@ function(el, x) {
   function applyFilter() {
     var tiers    = getChecked('.fm-tier');
     var sources  = getChecked('.fm-source');
+    var prices   = getChecked('.fm-price');
     var cuisines = getChecked('.fm-cuisine');
     var minN     = getMinSources();
     var searchEl = document.getElementById('fm-search');
@@ -457,6 +500,8 @@ function(el, x) {
     tiers.forEach(function(t) { tierSet[t] = true; });
     var sourceSet = {};
     sources.forEach(function(s) { sourceSet[s] = true; });
+    var priceSet = {};
+    prices.forEach(function(p) { priceSet[p] = true; });
     var cuisineSet = {};
     cuisines.forEach(function(c) { cuisineSet[c] = true; });
     var cuisineActive = totalCuisines > 0 && cuisines.length < totalCuisines;
@@ -471,6 +516,8 @@ function(el, x) {
         if (sourceSet[m._fmSources[i]]) hits++;
       }
       if (hits < minN) return false;
+
+      if (!priceSet[m._fmPrice]) return false;
 
       if (cuisineActive) {
         if (m._fmCuisines.length === 0) return cuisines.length > 0;
@@ -493,7 +540,7 @@ function(el, x) {
   }
 
   // Wire up listeners - every checkbox/select re-applies the filter
-  document.querySelectorAll('.fm-tier, .fm-source, .fm-cuisine').forEach(function(input) {
+  document.querySelectorAll('.fm-tier, .fm-source, .fm-price, .fm-cuisine').forEach(function(input) {
     input.addEventListener('change', applyFilter);
   });
   var minSel = document.getElementById('fm-min-sources');
