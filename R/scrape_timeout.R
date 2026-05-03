@@ -300,8 +300,21 @@ timeout_extract_digital_data <- function(html) {
   lat <- stringr::str_match(html, '"latitude"\\s*:\\s*(-?[0-9]+\\.?[0-9]*)')[, 2]
   lng <- stringr::str_match(html, '"longitude"\\s*:\\s*(-?[0-9]+\\.?[0-9]*)')[, 2]
 
-  list(
-    latitude  = if (!is.na(lat[1])) as.double(lat[1]) else NA_real_,
-    longitude = if (!is.na(lng[1])) as.double(lng[1]) else NA_real_
-  )
+  lat_val <- if (!is.na(lat[1])) as.double(lat[1]) else NA_real_
+  lng_val <- if (!is.na(lng[1])) as.double(lng[1]) else NA_real_
+
+  # Reject the US geographic-centre fallback. Some Time Out pages embed
+  # `"latitude":37.0902,"longitude":-95.7129` (centroid of the
+  # contiguous US) inside an unrelated JSON widget that appears in the
+  # HTML before the venue's real `digitalData` block. The regex grabs
+  # the first occurrence and these venues end up plotted in Oklahoma.
+  is_us_centroid <- !is.na(lat_val) && !is.na(lng_val) &&
+    abs(lat_val - 37.0902) < 0.01 &&
+    abs(lng_val - -95.7129) < 0.01
+  if (is_us_centroid) {
+    lat_val <- NA_real_
+    lng_val <- NA_real_
+  }
+
+  list(latitude = lat_val, longitude = lng_val)
 }

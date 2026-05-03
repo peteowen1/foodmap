@@ -9,7 +9,8 @@ geocode_restaurants(
   api_key = NULL,
   cache_path = "cache/geocodes.csv",
   force_refresh = FALSE,
-  country = "AU"
+  country = "AU",
+  city = NULL
 )
 }
 \arguments{
@@ -35,6 +36,13 @@ coordinates outside the country's bounding box are rejected. Set
 \code{NULL} for an unbiased global query. Default \code{"AU"} for back-compat
 with the original Sydney/Melbourne pipelines; pass \code{"US"}, \code{"GB"},
 etc. for other regions.}
+
+\item{city}{Character or \code{NULL}. Optional city slug (e.g.
+\code{"san-francisco"}). When the city has a registered tight bbox in
+\code{city_bbox()}, that's used both as the API \code{locationBias} and as
+the post-validation rectangle - much stricter than the country
+bbox, so same-named venues in other cities (Sai's in NYC vs SF)
+can't slip through. Defaults to \code{NULL} (country-only bias).}
 }
 \value{
 The input tibble with \code{latitude}, \code{longitude}, \code{formatted_address},

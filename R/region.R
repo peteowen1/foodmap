@@ -72,6 +72,31 @@ country_bbox <- function(country) {
 }
 
 
+#' Tight bounding box for a city, used by the geocoder when a country
+#' bbox is too loose to disambiguate same-named venues (e.g. "Sai's"
+#' in SF vs NYC). Returns NULL if no city-level bias is registered;
+#' callers fall back to the country bbox.
+#'
+#' Boxes are deliberately generous to cover the whole metro area
+#' (East Bay + North Bay for SF; Greater Sydney etc.) so that
+#' suburb-level scatter doesn't cause false rejections.
+#' @noRd
+city_bbox <- function(city) {
+  if (is.null(city) || is.na(city)) return(NULL)
+  city <- tolower(city)
+  city <- switch(city,
+    sf  = "san-francisco",
+    nyc = "new-york",
+    la  = "los-angeles",
+    city
+  )
+  switch(city,
+    `san-francisco` = list(lat = c(37.20, 38.20), lng = c(-123.10, -121.80)),
+    NULL
+  )
+}
+
+
 #' Region code passed to Google Places API for ranking bias
 #'
 #' Maps our two-letter ISO codes to the CLDR region codes the Places API
@@ -90,6 +115,20 @@ country_region_code <- function(country) {
 #' @noRd
 is_in_country <- function(lat, lng, country) {
   bbox <- country_bbox(country)
+  if (is.null(bbox)) return(rep(TRUE, length(lat)))
+  !is.na(lat) & !is.na(lng) &
+    lat >= bbox$lat[1] & lat <= bbox$lat[2] &
+    lng >= bbox$lng[1] & lng <= bbox$lng[2]
+}
+
+
+#' Are these coordinates inside the given city's bounding box?
+#'
+#' Like `is_in_country()` but tighter. If no bbox is registered for the
+#' city, returns TRUE for all coords (no validation possible).
+#' @noRd
+is_in_city <- function(lat, lng, city) {
+  bbox <- city_bbox(city)
   if (is.null(bbox)) return(rep(TRUE, length(lat)))
   !is.na(lat) & !is.na(lng) &
     lat >= bbox$lat[1] & lat <= bbox$lat[2] &

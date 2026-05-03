@@ -45,38 +45,38 @@ jba_records <- function(city) {
   }
 
   tibble::tribble(
-    ~name,                ~suburb,         ~category,                ~year, ~award,
+    ~name,                ~suburb,         ~category,                ~year, ~award,    ~cuisine,
     # Best Chef: California winners (recent)
-    "Mister Jiu's",            "Chinatown",     "Best Chef: California",  2023L, "Winner",
-    "Reem's California",       "Mission",       "Best Chef: California",  2022L, "Winner",
-    "State Bird Provisions",   "Western Addition", "Best Chef: West",     2022L, "Winner",
-    "Liholiho Yacht Club",     "Polk Gulch",    "Best Chef: West",        2017L, "Winner",
-    "Saison",                  "SoMa",          "Best Chef: West",        2016L, "Winner",
-    "Coi",                     "North Beach",   "Best Chef: West",        2014L, "Winner",
-    "Atelier Crenn",           "Cow Hollow",    "Best Chef: West",        2017L, "Winner",
+    "Mister Jiu's",            "Chinatown",     "Best Chef: California",  2023L, "Winner",   "Chinese",
+    "Reem's California",       "Mission",       "Best Chef: California",  2022L, "Winner",   "Middle Eastern",
+    "State Bird Provisions",   "Western Addition", "Best Chef: West",     2022L, "Winner",   "Contemporary American",
+    "Liholiho Yacht Club",     "Polk Gulch",    "Best Chef: West",        2017L, "Winner",   "Hawaiian",
+    "Saison",                  "SoMa",          "Best Chef: West",        2016L, "Winner",   "Contemporary American",
+    "Coi",                     "North Beach",   "Best Chef: West",        2014L, "Winner",   "Contemporary American",
+    "Atelier Crenn",           "Cow Hollow",    "Best Chef: West",        2017L, "Winner",   "French",
     # Outstanding Restaurant winners and recent finalists in SF
-    "Zuni Cafe",          "Hayes Valley",  "Outstanding Restaurant", 2003L, "Winner",
-    "Chez Panisse",       "Berkeley",      "Outstanding Restaurant", 1992L, "Winner",
-    "Slanted Door",       "Embarcadero",   "Outstanding Restaurant", 2014L, "Winner",
-    "State Bird Provisions", "Western Addition", "Outstanding Restaurant", 2017L, "Finalist",
-    "Octavia",            "Pacific Heights","Outstanding Restaurant", 2018L, "Finalist",
-    "Rich Table",         "Hayes Valley",  "Outstanding Restaurant", 2019L, "Finalist",
-    "Nopa",               "NOPA",          "Outstanding Restaurant", 2024L, "Finalist",
-    "Kin Khao",           "Tenderloin",    "Best Chef: West",        2019L, "Finalist",
-    "Lazy Bear",          "Mission",       "Outstanding Restaurant", 2020L, "Finalist",
+    "Zuni Cafe",          "Hayes Valley",  "Outstanding Restaurant", 2003L, "Winner",   "Mediterranean",
+    "Chez Panisse",       "Berkeley",      "Outstanding Restaurant", 1992L, "Winner",   "Californian",
+    "Slanted Door",       "Embarcadero",   "Outstanding Restaurant", 2014L, "Winner",   "Vietnamese",
+    "State Bird Provisions", "Western Addition", "Outstanding Restaurant", 2017L, "Finalist", "Contemporary American",
+    "Octavia",            "Pacific Heights","Outstanding Restaurant", 2018L, "Finalist", "Californian",
+    "Rich Table",         "Hayes Valley",  "Outstanding Restaurant", 2019L, "Finalist", "Contemporary American",
+    "Nopa",               "NOPA",          "Outstanding Restaurant", 2024L, "Finalist", "Californian",
+    "Kin Khao",           "Tenderloin",    "Best Chef: West",        2019L, "Finalist", "Thai",
+    "Lazy Bear",          "Mission",       "Outstanding Restaurant", 2020L, "Finalist", "Contemporary American",
     # Best New Restaurant (recent SF nominees)
-    "Cafe Nopa",          "NOPA",          "Best New Restaurant",    2025L, "Finalist",
-    "Birdsong",           "SoMa",          "Best New Restaurant",    2020L, "Finalist",
-    "Sons & Daughters",   "Nob Hill",      "Outstanding Restaurant", 2023L, "Finalist",
-    "Aphotic",            "SoMa",          "Best Chef: California",  2024L, "Finalist",
-    "Sorrel",             "Presidio Heights","Best Chef: California",2023L, "Finalist",
-    "Dalida",             "Presidio",      "Best New Restaurant",    2024L, "Finalist",
-    "Daytrip",            "Oakland",       "Best New Restaurant",    2024L, "Finalist",
+    "Cafe Nopa",          "NOPA",          "Best New Restaurant",    2025L, "Finalist", "Californian",
+    "Birdsong",           "SoMa",          "Best New Restaurant",    2020L, "Finalist", "Contemporary American",
+    "Sons & Daughters",   "Nob Hill",      "Outstanding Restaurant", 2023L, "Finalist", "Contemporary American",
+    "Aphotic",            "SoMa",          "Best Chef: California",  2024L, "Finalist", "Seafood",
+    "Sorrel",             "Presidio Heights","Best Chef: California",2023L, "Finalist", "Italian",
+    "Dalida",             "Presidio",      "Best New Restaurant",    2024L, "Finalist", "Mediterranean",
+    "Daytrip",            "Oakland",       "Best New Restaurant",    2024L, "Finalist", "Contemporary American",
     # Outstanding Chef nominations / wider category recognitions
-    "Quince",             "Jackson Square","Outstanding Restaurant", 2018L, "Finalist",
-    "SingleThread",       "Healdsburg",    "Outstanding Restaurant", 2024L, "Finalist",
-    "Benu",               "SoMa",          "Outstanding Service",    2017L, "Winner",
-    "Acquerello",         "Polk Gulch",    "Outstanding Wine Service",2018L,"Finalist"
+    "Quince",             "Jackson Square","Outstanding Restaurant", 2018L, "Finalist", "Italian",
+    "SingleThread",       "Healdsburg",    "Outstanding Restaurant", 2024L, "Finalist", "Japanese",
+    "Benu",               "SoMa",          "Outstanding Service",    2017L, "Winner",   "Contemporary American",
+    "Acquerello",         "Polk Gulch",    "Outstanding Wine Service",2018L,"Finalist", "Italian"
   )
 }
 
@@ -90,7 +90,7 @@ jba_to_tibble <- function(records) {
     name         = .data$name,
     suburb       = .data$suburb,
     address      = NA_character_,
-    cuisine      = NA_character_,
+    cuisine      = .data$cuisine,
     category     = "Restaurant",
     description  = paste0(
       "James Beard ", .data$award, " - ", .data$category, " (", .data$year, ")"

@@ -22,6 +22,12 @@
 #'   `NULL` for an unbiased global query. Default `"AU"` for back-compat
 #'   with the original Sydney/Melbourne pipelines; pass `"US"`, `"GB"`,
 #'   etc. for other regions.
+#' @param city Character or `NULL`. Optional city slug (e.g.
+#'   `"san-francisco"`). When the city has a registered tight bbox in
+#'   `city_bbox()`, that's used both as the API `locationBias` and as
+#'   the post-validation rectangle - much stricter than the country
+#'   bbox, so same-named venues in other cities (Sai's in NYC vs SF)
+#'   can't slip through. Defaults to `NULL` (country-only bias).
 #'
 #' @return The input tibble with `latitude`, `longitude`, `formatted_address`,
 #'   and `place_id` columns populated.
@@ -30,13 +36,15 @@ geocode_restaurants <- function(restaurants,
                                 api_key = NULL,
                                 cache_path = "cache/geocodes.csv",
                                 force_refresh = FALSE,
-                                country = "AU") {
+                                country = "AU",
+                                city = NULL) {
 
   restaurants <- ensure_geocode_cols(restaurants)
 
   # Step 1 -- fill in coordinates from the on-disk cache (unless overridden)
   if (!is.null(cache_path) && !force_refresh && file.exists(cache_path)) {
-    restaurants <- geocode_cache_apply(restaurants, cache_path, country)
+    restaurants <- geocode_cache_apply(restaurants, cache_path, country,
+                                       city = city)
   }
 
   needs_geocoding <- is.na(restaurants$latitude) | is.na(restaurants$longitude)
@@ -59,7 +67,7 @@ geocode_restaurants <- function(restaurants,
     row <- restaurants[i, ]
     query <- build_geocode_query(row$name, row$suburb, row$address, country)
 
-    result <- places_text_search(query, api_key, country = country)
+    result <- places_text_search(query, api_key, country = country, city = city)
 
     if (!is.null(result)) {
       restaurants$latitude[i]          <- result$lat
@@ -89,7 +97,8 @@ geocode_restaurants <- function(restaurants,
 
 #' Read a geocode cache CSV and fill matching coords into a restaurants tibble
 #' @noRd
-geocode_cache_apply <- function(restaurants, cache_path, country = NULL) {
+geocode_cache_apply <- function(restaurants, cache_path, country = NULL,
+                                city = NULL) {
   cached <- tryCatch(
     utils::read.csv(cache_path, stringsAsFactors = FALSE,
                     na.strings = c("", "NA")),
@@ -114,22 +123,30 @@ geocode_cache_apply <- function(restaurants, cache_path, country = NULL) {
   )
 
   # Self-heal: any cached coords that fall outside the target country's
-  # bounding box get cleared so they'll be re-geocoded with the right
-  # regional bias. Skipped when country is NULL (no bias was applied).
-  if (!is.null(country) && !is.na(country)) {
-    bad <- !is.na(restaurants$latitude) &
+  # bounding box (or, when city is provided, the tighter city bbox)
+  # get cleared so they'll be re-geocoded with the right regional bias.
+  # Skipped when both bias sources are unavailable.
+  has_city_bbox <- !is.null(city_bbox(city))
+  invalid <- if (has_city_bbox) {
+    !is.na(restaurants$latitude) &
+      !is_in_city(restaurants$latitude, restaurants$longitude, city)
+  } else if (!is.null(country) && !is.na(country)) {
+    !is.na(restaurants$latitude) &
       !is_in_country(restaurants$latitude, restaurants$longitude, country)
-    if (any(bad)) {
-      cli::cli_warn(
-        "{sum(bad)} cached coord{?s} fell outside {country} and will be re-geocoded"
-      )
-      restaurants$latitude[bad] <- NA_real_
-      restaurants$longitude[bad] <- NA_real_
-      if ("formatted_address" %in% names(restaurants))
-        restaurants$formatted_address[bad] <- NA_character_
-      if ("place_id" %in% names(restaurants))
-        restaurants$place_id[bad] <- NA_character_
-    }
+  } else {
+    rep(FALSE, nrow(restaurants))
+  }
+  if (any(invalid)) {
+    region_label <- if (has_city_bbox) city else country
+    cli::cli_warn(
+      "{sum(invalid)} cached coord{?s} fell outside {region_label} and will be re-geocoded"
+    )
+    restaurants$latitude[invalid] <- NA_real_
+    restaurants$longitude[invalid] <- NA_real_
+    if ("formatted_address" %in% names(restaurants))
+      restaurants$formatted_address[invalid] <- NA_character_
+    if ("place_id" %in% names(restaurants))
+      restaurants$place_id[invalid] <- NA_character_
   }
 
   reused <- sum(!is.na(restaurants$latitude)) - before
@@ -227,11 +244,14 @@ country_query_label <- function(country) {
 #' bbox so a strongly-matched foreign place can't slip through the
 #' soft `regionCode` bias.
 #' @noRd
-places_text_search <- function(query, api_key, country = "AU") {
+places_text_search <- function(query, api_key, country = "AU", city = NULL) {
 
   body <- list(textQuery = query)
   rcode <- country_region_code(country)
-  bbox  <- country_bbox(country)
+  # Prefer the tight city bbox over the country bbox when available -
+  # otherwise SF queries get all 9.8M km^2 of the US to choose from
+  # and same-named venues in other US cities can outrank the SF one.
+  bbox  <- city_bbox(city) %||% country_bbox(country)
   if (!is.null(rcode)) body$regionCode <- rcode
   if (!is.null(bbox)) {
     body$locationBias <- list(
@@ -268,13 +288,17 @@ places_text_search <- function(query, api_key, country = "AU") {
     return(NULL)
   }
 
-  # Reject any results outside the target country's bbox (region bias
-  # is a preference, not a hard restriction). When country is NULL,
-  # is_in_country returns TRUE for everything so the first hit wins.
+  # Reject any results outside the target bbox (region bias is a
+  # preference, not a hard restriction). City bbox wins over country
+  # when both are set; when neither is set, accept everything.
+  in_region <- function(lat, lng) {
+    if (!is.null(city_bbox(city))) is_in_city(lat, lng, city)
+    else is_in_country(lat, lng, country)
+  }
   for (p in places) {
     lat <- p$location$latitude
     lng <- p$location$longitude
-    if (isTRUE(is_in_country(lat, lng, country))) {
+    if (isTRUE(in_region(lat, lng))) {
       return(list(
         lat      = lat,
         lng      = lng,
@@ -284,6 +308,7 @@ places_text_search <- function(query, api_key, country = "AU") {
     }
   }
 
-  cli::cli_warn("No {country %||% 'matching'} results for {.val {query}}")
+  region_label <- city %||% country %||% "matching"
+  cli::cli_warn("No {region_label} results for {.val {query}}")
   NULL
 }

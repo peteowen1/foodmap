@@ -10,7 +10,7 @@ devtools::load_all()
 
 all <- scrape_all_sources("san-francisco", use_cache = TRUE) |>
   deduplicate_restaurants() |>
-  geocode_restaurants(country = "US") |>
+  geocode_restaurants(country = "US", city = "san-francisco") |>
   infer_missing_price() |>
   harmonize_sources()
 

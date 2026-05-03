@@ -42,7 +42,7 @@ scrape_eater <- function(city = "san-francisco",
       }
     )
     if (is.null(html_str)) return(NULL)
-    eater_parse_guide(html_str)
+    eater_parse_guide(html_str, slug = slug)
   })
   results <- purrr::compact(results)
   if (length(results) == 0) {
@@ -92,8 +92,15 @@ eater_default_guides <- function(city) {
 
 
 #' Parse all venues out of an Eater map page's inline JSON
+#'
+#' @param html_str Raw HTML from an Eater map page.
+#' @param slug Guide slug (e.g. `"best-pizza-san-francisco"`). When the
+#'   slug implies a specific cuisine, every parsed row inherits that
+#'   tag - Eater doesn't expose `servesCuisine` on its map pages, so
+#'   this is the most reliable signal we have. NA for flagship lists
+#'   without an implied cuisine.
 #' @noRd
-eater_parse_guide <- function(html_str) {
+eater_parse_guide <- function(html_str, slug = NA_character_) {
   # Each venue's data is interleaved in the article HTML. The pattern is
   #   "location":{"latitude":X,"longitude":Y},"name":"NAME"
   # followed (within ~3 KB) by
@@ -103,6 +110,7 @@ eater_parse_guide <- function(html_str) {
   if (nrow(m) == 0) return(NULL)
 
   starts <- stringr::str_locate_all(html_str, loc_re)[[1]][, "start"]
+  cuisine_from_slug <- eater_slug_to_cuisine(slug)
 
   rows <- lapply(seq_len(nrow(m)), function(i) {
     name <- eater_unescape(m[i, 4])
@@ -122,7 +130,7 @@ eater_parse_guide <- function(html_str) {
       name         = name,
       suburb       = suburb,
       address      = addr,
-      cuisine      = NA_character_,
+      cuisine      = cuisine_from_slug,
       category     = "Restaurant",
       description  = NA_character_,
       price_range  = NA_integer_,
@@ -157,6 +165,50 @@ eater_suburb_from_address <- function(addr) {
   }
   if (length(parts) == 0) return(NA_character_)
   parts[length(parts)]
+}
+
+
+#' Map an Eater guide slug to an implied cuisine tag
+#'
+#' Eater's map pages don't carry `servesCuisine`, so the slug is the
+#' most reliable cuisine signal: `best-pizza-san-francisco` is, by
+#' construction, a list of pizza places. Returns NA for flagship
+#' best-of-everything lists where no single cuisine is implied.
+#' @noRd
+eater_slug_to_cuisine <- function(slug) {
+  if (is.na(slug) || !nzchar(slug)) return(NA_character_)
+  # Order matters: more specific first
+  patterns <- c(
+    "ice-cream"    = "Ice Cream",
+    "coffee"       = "Coffee",
+    "pizza"        = "Pizza",
+    "brunch"       = "Brunch",
+    "steakhouse"   = "Steakhouse",
+    "ramen"        = "Ramen",
+    "pho"          = "Vietnamese",
+    "noodle"       = "Noodles",
+    "pasta"        = "Pasta",
+    "dim-sum"      = "Dim Sum",
+    "italian"      = "Italian",
+    "chinese"      = "Chinese",
+    "japanese"     = "Japanese",
+    "korean"       = "Korean",
+    "vietnamese"   = "Vietnamese",
+    "thai"         = "Thai",
+    "indian"       = "Indian",
+    "mexican"      = "Mexican",
+    "french"       = "French",
+    "seafood"      = "Seafood",
+    "burger"       = "Burgers",
+    "barbecue"     = "Barbecue",
+    "bbq"          = "Barbecue",
+    "bakeries"     = "Bakery/Cafe",
+    "bagel"        = "Bakery/Cafe"
+  )
+  for (key in names(patterns)) {
+    if (grepl(key, slug, fixed = TRUE)) return(patterns[[key]])
+  }
+  NA_character_
 }
 
 
