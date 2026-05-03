@@ -182,7 +182,9 @@ deduplicate_restaurants <- function(restaurants) {
     # the same venue from Eater / Michelin / 7x7 often carries the
     # actual neighborhood (Mission, Hayes Valley, FiDi). Pick the
     # specific one so popups show useful location info.
-    if (!is.na(merged_row$suburb) && is_generic_suburb(merged_row$suburb)) {
+    suburb_val <- merged_row$suburb
+    if (length(suburb_val) > 0 && !is.na(suburb_val) &&
+        is_generic_suburb(suburb_val)) {
       candidates <- subset$suburb[
         !is.na(subset$suburb) & !vapply(subset$suburb, is_generic_suburb, logical(1))
       ]
@@ -372,7 +374,11 @@ gfg_dedup_address_pass <- function(groups, restaurants) {
 #'   - Empty / NA strings
 #' @noRd
 is_generic_suburb <- function(s) {
-  if (is.na(s) || !nzchar(stringr::str_squish(s))) return(FALSE)
+  # Tibble column extracts can be length-0 when a column is absent
+  # rather than NA; guard before is.na() to avoid a `logical(0)` that
+  # `if` cannot evaluate.
+  if (length(s) == 0 || is.na(s)) return(FALSE)
+  if (!nzchar(stringr::str_squish(s))) return(FALSE)
   s_norm <- tolower(stringr::str_squish(s))
   city_names <- c(
     "san francisco", "new york", "los angeles", "chicago", "boston",
