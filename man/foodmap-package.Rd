@@ -6,7 +6,7 @@
 \alias{foodmap-package}
 \title{foodmap: Map Australia's Best Restaurants from Multiple Guides}
 \description{
-Scrapes restaurant guides (Broadsheet, Gourmet Traveller, Time Out, AGFG, Urban List, Good Food Guide), geocodes venues via the Google Places API, and exports KML files for import into Google My Maps.
+Scrapes Australian and US restaurant guides (Broadsheet, Gourmet Traveller, Time Out, AGFG, Urban List, Good Food Guide, SMH GFG awards, Concrete Playground, The Infatuation, Eater, 7x7, Conde Nast Traveler, James Beard Awards, Michelin Guide), geocodes venues via the Google Places API, and exports KML, CSV, and interactive Leaflet HTML files.
 }
 \author{
 \strong{Maintainer}: Peter Owen \email{peter@bzi.com.au}

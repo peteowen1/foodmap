@@ -17,5 +17,5 @@ description, price_range, rating, rating_scale, latitude, longitude, url.
 }
 \description{
 Fetches the Gourmet Traveller best restaurants list for a given city.
-Uses static HTML parsing via rvest — no JavaScript rendering needed.
+Uses static HTML parsing via rvest -- no JavaScript rendering needed.
 }

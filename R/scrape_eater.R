@@ -78,7 +78,13 @@ eater_default_guides <- function(city) {
       "best-new-restaurants-san-francisco",
       "best-brunch-san-francisco",
       "best-pizza-san-francisco",
-      "best-steakhouses-san-francisco"
+      "best-steakhouses-san-francisco",
+      # Coffee / ice cream guides for cafe-side coverage. Eater SF
+      # doesn't publish a separate bakery map (the existing "best
+      # bakeries" slug 404s), so cafe coverage relies on coffee +
+      # crossover from the Infatuation slugs above.
+      "best-coffee-shops-san-francisco",
+      "best-ice-cream-san-francisco"
     ),
     cli::cli_abort("No default Eater guides for {.val {city}}")
   )

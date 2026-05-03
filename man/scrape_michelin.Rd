@@ -27,7 +27,7 @@ A tibble with the standard scraper schema plus
 \code{phone}, and \code{cost_range} columns.
 }
 \description{
-Pulls the full restaurant set for a city — every tier from Selected
+Pulls the full restaurant set for a city -- every tier from Selected
 through Bib Gourmand and One/Two/Three Stars. The listing pages are
 server-rendered HTML with a flat link-card layout, and detail pages
 embed a clean \code{Restaurant} JSON-LD block (address, latitude/longitude,
@@ -39,6 +39,6 @@ Michelin sits behind CloudFront and silently bounces requests with a
 bare User-Agent (HTTP 202 with empty body), so the scraper layers in
 \code{Accept}, \code{Accept-Language}, and \code{Referer} headers. The Guide
 refreshes annually, so caching defaults to 30 days rather than the
-usual 24 hours — re-running with \code{use_cache = TRUE} finishes in
+usual 24 hours -- re-running with \code{use_cache = TRUE} finishes in
 seconds and never re-fetches.
 }

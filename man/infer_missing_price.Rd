@@ -25,20 +25,20 @@ priority order; the first match wins. Always adds (or refreshes) a
 \details{
 Rules:
 \enumerate{
-  \item Michelin Three Stars or Two Stars -> 4 (premium)
-  \item Michelin One Star                 -> 3
-  \item Michelin Bib Gourmand             -> 2 (good value)
-  \item Description matches "fine dining|tasting menu|degustation|
-        chef's table|prix fixe"           -> 4
-  \item Cuisine matches "cafe|deli|bakery|takeaway|sandwich|noodle bar|
-        juice bar|cake shop|food truck"   -> 1
-  \item Cuisine matches "pizza|pizzeria|ramen|dumpling|pho|taqueria|
-        burger|bbq"                       -> 2
-  \item No match: leave NA (price_inferred FALSE)
+\item Michelin Three Stars or Two Stars -> 4 (premium)
+\item Michelin One Star                 -> 3
+\item Michelin Bib Gourmand             -> 2 (good value)
+\item Description matches "fine dining|tasting menu|degustation|
+chef's table|prix fixe"           -> 4
+\item Cuisine matches "cafe|deli|bakery|takeaway|sandwich|noodle bar|
+juice bar|cake shop|food truck"   -> 1
+\item Cuisine matches "pizza|pizzeria|ramen|dumpling|pho|taqueria|
+burger|bbq"                       -> 2
+\item No match: leave NA (price_inferred FALSE)
 }
 
 Michelin Selected venues without a \code{priceRange} field deliberately
-don't get an inferred price — Selected covers a huge spread (cheap
+don't get an inferred price -- Selected covers a huge spread (cheap
 Filipino takeaway alongside upmarket bistros) and any single value
 would be misleading.
 }

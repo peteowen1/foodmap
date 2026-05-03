@@ -519,7 +519,12 @@ function(el, x) {
       if (!priceSet[m._fmPrice]) return false;
 
       if (cuisineActive) {
-        if (m._fmCuisines.length === 0) return cuisines.length > 0;
+        // Untagged venues are hidden whenever the user is narrowing -
+        // 'I only want cafes' implies 'not the un-tagged restaurants
+        // and bars'. Showing them caused obvious bar/restaurant noise
+        // to leak into cuisine-narrowed views (e.g. cocktail bars
+        // appearing under a cafe filter when their cuisine field was NA).
+        if (m._fmCuisines.length === 0) return false;
         var cuisineHit = false;
         for (var j = 0; j < m._fmCuisines.length; j++) {
           if (cuisineSet[m._fmCuisines[j]]) { cuisineHit = true; break; }

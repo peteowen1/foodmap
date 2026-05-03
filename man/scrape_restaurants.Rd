@@ -18,7 +18,7 @@ scrape_restaurants(
 \code{"gourmet_traveller"}, \code{"timeout"}, \code{"urban_list"}, \code{"agfg"},
 \code{"good_food_guide"}, \code{"gfg_awards"}, \code{"concrete_playground"},
 \code{"infatuation"}, \code{"eater"}, \code{"7x7"}, \code{"cn_traveler"},
-\code{"james_beard"}, \code{"michelin"}. Default \code{"broadsheet"}.}
+\code{"james_beard"}, \code{"michelin"}, \code{"sprudge"}. Default \code{"broadsheet"}.}
 
 \item{use_chromote}{Logical. Force headless Chrome rendering where applicable.
 Default \code{FALSE}.}

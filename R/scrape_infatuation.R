@@ -79,7 +79,16 @@ infatuation_default_guides <- function(city) {
       "the-best-pasta-in-san-francisco",
       "best-croissants-sf",
       "best-matcha-san-francisco",
-      "best-cha-chaan-teng-sf"
+      "best-cha-chaan-teng-sf",
+      # Cafe / coffee / bakery / breakfast guides - the Sydneysider's
+      # cafe corner. These broaden cuisine coverage so the cafe filter
+      # actually has something to show beyond a handful of bakeries.
+      "best-coffee-shops-san-francisco",
+      "best-breakfast-san-francisco",
+      "best-brunch-san-francisco",
+      "best-lunch-in-san-francisco",
+      "great-savory-croissants-sf",
+      "pop-up-bakeries-san-francisco"
     ),
     cli::cli_abort("No default Infatuation guides for {.val {city}}")
   )

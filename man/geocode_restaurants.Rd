@@ -42,6 +42,6 @@ and \code{place_id} columns populated.
 }
 \description{
 For rows missing latitude/longitude, queries the Google Places API (New)
-Text Search to resolve coordinates. Safe to re-run — skips rows that
+Text Search to resolve coordinates. Safe to re-run -- skips rows that
 already have coordinates and reuses prior results from a local cache.
 }

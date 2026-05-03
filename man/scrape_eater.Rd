@@ -28,7 +28,7 @@ San Francisco", "Heatmap of New Restaurants", "Best Bars", etc.).
 Each map page embeds the venue payload as inline JSON inside the
 article HTML (one block per venue with \code{location.latitude},
 \code{location.longitude}, \code{name}, \code{venue.address}). We pull those out
-with a couple of regexes — no per-venue detail fetch needed.
+with a couple of regexes -- no per-venue detail fetch needed.
 }
 \details{
 By default the scraper hits the city's flagship "Essential 38" /

@@ -31,7 +31,7 @@ Restaurants To Make You Fall In Love With SF Again", "Best Italian
 Restaurants in SF", etc.). Each guide page embeds a structured
 JSON-LD ItemList with the full venue details (name, address,
 coordinates, cuisine, price, description), so a single HTTP fetch
-per guide is enough — no per-venue detail call needed.
+per guide is enough -- no per-venue detail call needed.
 }
 \details{
 By default we pull the flagship "best of" list per city. Pass a

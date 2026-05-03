@@ -8,7 +8,7 @@
 #'   `"gourmet_traveller"`, `"timeout"`, `"urban_list"`, `"agfg"`,
 #'   `"good_food_guide"`, `"gfg_awards"`, `"concrete_playground"`,
 #'   `"infatuation"`, `"eater"`, `"7x7"`, `"cn_traveler"`,
-#'   `"james_beard"`, `"michelin"`. Default `"broadsheet"`.
+#'   `"james_beard"`, `"michelin"`, `"sprudge"`. Default `"broadsheet"`.
 #' @param use_chromote Logical. Force headless Chrome rendering where applicable.
 #'   Default `FALSE`.
 #' @param use_cache Logical. If `TRUE`, cache HTTP responses locally to avoid
@@ -44,6 +44,7 @@ scrape_restaurants <- function(city = "sydney",
     cn_traveler       = scrape_cn_traveler(city, use_cache = use_cache),
     james_beard       = scrape_james_beard(city),
     michelin          = scrape_michelin(city, use_cache = use_cache),
+    sprudge           = scrape_sprudge(city, use_cache = use_cache),
     cli::cli_abort("Internal: dispatcher missing case for {.val {source}}")
   )
 }
