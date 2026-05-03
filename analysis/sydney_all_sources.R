@@ -6,7 +6,7 @@ devtools::load_all()
 
 all <- scrape_all_sources("sydney", use_cache = TRUE) |>
   deduplicate_restaurants() |>
-  geocode_restaurants() |>
+  geocode_restaurants(country = "AU", city = "sydney") |>
   infer_missing_price() |>
   harmonize_sources()
 # To force re-geocoding (e.g. after suspecting stale coords):

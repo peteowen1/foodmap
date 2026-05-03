@@ -74,7 +74,9 @@ jba_records <- function(city) {
     "Daytrip",            "Oakland",       "Best New Restaurant",    2024L, "Finalist", "Contemporary American",
     # Outstanding Chef nominations / wider category recognitions
     "Quince",             "Jackson Square","Outstanding Restaurant", 2018L, "Finalist", "Italian",
-    "SingleThread",       "Healdsburg",    "Outstanding Restaurant", 2024L, "Finalist", "Japanese",
+    # SingleThread is in Healdsburg (~70 mi north of SF, in Sonoma
+    # County) and falls outside the SF city bbox - removed so the
+    # geocoder doesn't waste an API call rejecting it.
     "Benu",               "SoMa",          "Outstanding Service",    2017L, "Winner",   "Contemporary American",
     "Acquerello",         "Polk Gulch",    "Outstanding Wine Service",2018L,"Finalist", "Italian"
   )

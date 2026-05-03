@@ -176,6 +176,19 @@ deduplicate_restaurants <- function(restaurants) {
       }
     }
 
+    # Special handling: prefer a specific neighborhood over a generic
+    # city-name suburb. Infatuation / CN Traveler / Sprudge default
+    # suburb to the city when they don't know the neighborhood, but
+    # the same venue from Eater / Michelin / 7x7 often carries the
+    # actual neighborhood (Mission, Hayes Valley, FiDi). Pick the
+    # specific one so popups show useful location info.
+    if (!is.na(merged_row$suburb) && is_generic_suburb(merged_row$suburb)) {
+      candidates <- subset$suburb[
+        !is.na(subset$suburb) & !vapply(subset$suburb, is_generic_suburb, logical(1))
+      ]
+      if (length(candidates) > 0) merged_row$suburb <- candidates[1]
+    }
+
     # Special handling: combine sources
     merged_row$source <- paste(unique(subset$source), collapse = ", ")
     merged_row$n_sources <- length(unique(subset$source))
@@ -349,6 +362,28 @@ gfg_dedup_address_pass <- function(groups, restaurants) {
   unique_roots <- unique(roots)
   lapply(unique_roots, function(r) unlist(groups[which(roots == r)]))
 }
+
+#' Is this suburb just the city name (or postcode garbage)?
+#'
+#' Used during the merge step to prefer specific neighborhoods over
+#' generic city-level fallbacks. Recognises:
+#'   - Bare city names: "San Francisco", "Sydney", "Melbourne", ...
+#'   - Postcode-only forms: "California 94115", "CA 94110"
+#'   - Empty / NA strings
+#' @noRd
+is_generic_suburb <- function(s) {
+  if (is.na(s) || !nzchar(stringr::str_squish(s))) return(FALSE)
+  s_norm <- tolower(stringr::str_squish(s))
+  city_names <- c(
+    "san francisco", "new york", "los angeles", "chicago", "boston",
+    "sydney", "melbourne", "brisbane", "adelaide", "perth", "hobart",
+    "canberra", "darwin", "gold coast"
+  )
+  if (s_norm %in% city_names) return(TRUE)
+  # "California 94115" / "CA 94110" / similar state+zip combos
+  grepl("^[a-z]{2,12}\\s+\\d{4,5}$", s_norm)
+}
+
 
 #' Reduce a freeform address string to "<number> <street name> <type>"
 #'

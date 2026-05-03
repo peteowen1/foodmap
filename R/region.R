@@ -92,6 +92,15 @@ city_bbox <- function(city) {
   )
   switch(city,
     `san-francisco` = list(lat = c(37.20, 38.20), lng = c(-123.10, -121.80)),
+    # Greater Sydney: Penrith/Campbelltown west to Manly/Bondi east,
+    # Hornsby north to Sutherland south. Generous enough to cover
+    # outer-suburb venues without bleeding into the Central Coast or
+    # Wollongong (which the country bbox would happily allow).
+    sydney          = list(lat = c(-34.20, -33.50), lng = c(150.50, 151.40)),
+    # Greater Melbourne: covers everything from Werribee to Lilydale
+    # and Frankston up to the city centre. Tight enough to keep
+    # Geelong / Mornington Peninsula venues out.
+    melbourne       = list(lat = c(-38.20, -37.55), lng = c(144.50, 145.50)),
     NULL
   )
 }
