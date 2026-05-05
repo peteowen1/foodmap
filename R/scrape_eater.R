@@ -126,14 +126,21 @@ eater_parse_guide <- function(html_str, slug = NA_character_) {
 
     suburb <- eater_suburb_from_address(addr)
 
+    # Pull the venue slug out of the same chunk, then locate the
+    # editorial article block (anchored at id="<slug>") and extract
+    # the description + price-range paragraphs that Eater renders
+    # underneath the H2.
+    venue_slug <- stringr::str_match(chunk, '"slug":"([^"]+)"')[1, 2]
+    article    <- eater_extract_article_block(html_str, venue_slug)
+
     tibble::tibble(
       name         = name,
       suburb       = suburb,
       address      = addr,
       cuisine      = cuisine_from_slug,
       category     = "Restaurant",
-      description  = NA_character_,
-      price_range  = NA_integer_,
+      description  = article$description,
+      price_range  = article$price_range,
       rating       = NA_real_,
       rating_scale = NA_character_,
       latitude     = lat,
@@ -143,6 +150,77 @@ eater_parse_guide <- function(html_str, slug = NA_character_) {
   })
 
   dplyr::bind_rows(rows)
+}
+
+
+#' Extract the description + price range from the editorial block
+#'
+#' Eater articles render each venue as:
+#'   <a id="<slug>">...<h2>Name</h2>
+#'   <p><strong>Open for:</strong> ...</p>
+#'   <p><strong>Price range:</strong> $$$</p>
+#'   <p>Free-prose description...</p>
+#'
+#' Given the venue slug, find that block and return both the price
+#' range as an integer (count of `$`) and the first non-metadata
+#' paragraph as the description.
+#' @noRd
+eater_extract_article_block <- function(html_str, slug) {
+  empty <- list(description = NA_character_, price_range = NA_integer_)
+  if (is.na(slug) || !nzchar(slug)) return(empty)
+
+  anchor <- paste0('id="', slug, '"')
+  pos <- stringr::str_locate(html_str, stringr::fixed(anchor))[1, "start"]
+  if (is.na(pos)) return(empty)
+
+  # 5 KB chunk should cover the H2 + a few <p> blocks comfortably; the
+  # next venue's anchor is typically further down.
+  block <- substr(html_str, pos, min(nchar(html_str), pos + 5000L))
+
+  # All <p>...</p> chunks within the block, including their inner HTML
+  # so we can spot <strong>Price range</strong> markers.
+  paragraphs <- stringr::str_match_all(
+    block, "<p[^>]*>([\\s\\S]*?)</p>"
+  )[[1]]
+  if (nrow(paragraphs) == 0) return(empty)
+
+  # Price range: the paragraph beginning with "Price range:". Count $.
+  price_int <- NA_integer_
+  for (k in seq_len(nrow(paragraphs))) {
+    inner <- paragraphs[k, 2]
+    if (grepl("Price range:", inner, fixed = TRUE)) {
+      n_dollar <- stringr::str_count(inner, "\\$")
+      if (n_dollar >= 1) price_int <- as.integer(min(n_dollar, 4))
+      break
+    }
+  }
+
+  # Description: first paragraph that isn't a metadata row. Eater
+  # uses several formats: "<strong>Open for:</strong> ...",
+  # "<b>Open for</b>: ...", or even plain "Open for: ..." with no
+  # wrapper. Detect them all by looking for a metadata label near the
+  # paragraph's start, regardless of HTML tags.
+  meta_labels <- "(?i)\\b(open for|price range|address|reservations|recommended dish(es)?|why we like it|why we love it|hours|phone|website)\\b\\s*:"
+  desc <- NA_character_
+  for (k in seq_len(nrow(paragraphs))) {
+    inner <- paragraphs[k, 2]
+    text <- inner |>
+      stringr::str_replace_all("<[^>]+>", "") |>
+      eater_unescape() |>
+      stringr::str_squish()
+    if (nchar(text) < 30) next
+    # First ~40 chars contain a metadata label? Skip.
+    head <- substr(text, 1, 40)
+    if (grepl(meta_labels, head, perl = TRUE)) next
+    desc <- if (nchar(text) > 500) {
+      paste0(substr(text, 1, 497), "...")
+    } else {
+      text
+    }
+    break
+  }
+
+  list(description = desc, price_range = price_int)
 }
 
 

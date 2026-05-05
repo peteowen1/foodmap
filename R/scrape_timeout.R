@@ -205,15 +205,42 @@ timeout_fetch_detail <- function(url, use_cache = FALSE) {
   # Try digitalData for coordinates
   coords <- timeout_extract_digital_data(html)
 
+  # Fallback for description: many Time Out pages serve a `Review`
+  # JSON-LD type with empty `reviewBody` (the parser correctly skips
+  # those because `@type` isn't `Restaurant`). On those pages the
+  # full review prose still lives in the og:description meta tag, so
+  # fall back to it when JSON-LD didn't give us anything usable.
+  description <- json_ld$description
+  if (is.na(description) || !nzchar(description)) {
+    og <- timeout_extract_og_description(html)
+    if (!is.na(og) && nzchar(og)) description <- og
+  }
+
   list(
     cuisine     = json_ld$cuisine,
-    description = json_ld$description,
+    description = description,
     suburb      = json_ld$suburb,
     address     = json_ld$address,
     latitude    = coords$latitude %||% json_ld$latitude,
     longitude   = coords$longitude %||% json_ld$longitude,
     price_range = json_ld$price_range
   )
+}
+
+
+#' Extract the og:description meta tag (Time Out's reliable fallback)
+#'
+#' Truncates to 500 chars to keep popups manageable.
+#' @noRd
+timeout_extract_og_description <- function(html) {
+  m <- stringr::str_match(
+    html, '<meta\\s+property="og:description"\\s+content="([^"]+)"'
+  )
+  text <- m[1, 2]
+  if (is.na(text) || !nzchar(text)) return(NA_character_)
+  text <- decode_html_entities(text)
+  if (nchar(text) > 500) text <- paste0(substr(text, 1, 497), "...")
+  text
 }
 
 #' Extract venue data from JSON-LD Restaurant schema
@@ -255,10 +282,15 @@ timeout_extract_jsonld <- function(page) {
         NA_character_
       }
 
-      # Description from review text
+      # Description from review text. Time Out has used a few keys
+      # over the years (`reviewBody`, `text`, `description`); fall
+      # through them in order of recency. The current site (2025+)
+      # populates `review.description`.
       review <- item[["review"]]
       desc <- if (is.list(review)) {
-        review_text <- review[["reviewBody"]] %||% review[["text"]]
+        review_text <- review[["description"]] %||%
+                       review[["reviewBody"]] %||%
+                       review[["text"]]
         if (!is.null(review_text) && nchar(review_text) > 0) {
           # Truncate very long reviews to first 500 chars
           if (nchar(review_text) > 500) {
