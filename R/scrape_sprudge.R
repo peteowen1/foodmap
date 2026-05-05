@@ -217,7 +217,7 @@ sprudge_clean_name <- function(title) {
   # or "Cafe's New Location" -- the geocoder needs the cafe name only.
   title <- stringr::str_replace(
     title,
-    "(?i)['’]s\\s+(?:new|first|second|third|fourth|fifth|nth|next)\\s+location.*$",
+    "(?i)['\u2019]s\\s+(?:new|first|second|third|fourth|fifth|nth|next)\\s+location.*$",
     ""
   )
 
