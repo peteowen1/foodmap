@@ -11,10 +11,15 @@
 #' @export
 export_csv <- function(restaurants, output_path = "hotlist.csv") {
   tryCatch(
-    {
-      utils::write.csv(restaurants, output_path, row.names = FALSE)
-      cli::cli_alert_success("CSV written to {.file {output_path}} ({nrow(restaurants)} venues)")
-    },
+    withCallingHandlers(
+      {
+        utils::write.csv(restaurants, output_path, row.names = FALSE)
+        cli::cli_alert_success("CSV written to {.file {output_path}} ({nrow(restaurants)} venues)")
+      },
+      # base R file() emits a warning before erroring on bad paths;
+      # promote it so a single tryCatch(error=) handles all write failures.
+      warning = function(w) stop(conditionMessage(w), call. = FALSE)
+    ),
     error = function(e) {
       cli::cli_abort(c(
         "Failed to write CSV to {.file {output_path}}.",
