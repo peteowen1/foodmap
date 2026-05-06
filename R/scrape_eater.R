@@ -133,11 +133,21 @@ eater_parse_guide <- function(html_str, slug = NA_character_) {
     venue_slug <- stringr::str_match(chunk, '"slug":"([^"]+)"')[1, 2]
     article    <- eater_extract_article_block(html_str, venue_slug)
 
+    # When the slug didn't imply a cuisine (flagship best-of lists),
+    # try the editorial description: Eater's writers routinely tag a
+    # place as "Italian", "Cantonese-style", "Detroit-style pizza"
+    # etc. via the shared prose_to_cuisine() rules.
+    cuisine_final <- if (is.na(cuisine_from_slug)) {
+      prose_to_cuisine(article$description)
+    } else {
+      cuisine_from_slug
+    }
+
     tibble::tibble(
       name         = name,
       suburb       = suburb,
       address      = addr,
-      cuisine      = cuisine_from_slug,
+      cuisine      = cuisine_final,
       category     = "Restaurant",
       description  = article$description,
       price_range  = article$price_range,

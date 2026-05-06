@@ -64,3 +64,52 @@ test_that("seven_dish_to_cuisine returns NA when nothing matches", {
   expect_true(is.na(seven_dish_to_cuisine("")))
   expect_true(is.na(seven_dish_to_cuisine(NA_character_)))
 })
+
+test_that("prose_to_cuisine fires on identity-anchored adjectives", {
+  expect_equal(
+    prose_to_cuisine("This Italian restaurant in the Mission..."),
+    "Italian"
+  )
+  expect_equal(
+    prose_to_cuisine("A taqueria in the heart of the city."),
+    "Mexican"
+  )
+  expect_equal(
+    prose_to_cuisine("This izakaya serves yakitori and sake."),
+    "Japanese"
+  )
+  expect_equal(
+    prose_to_cuisine("A trattoria with handmade pasta."),
+    "Italian"
+  )
+})
+
+test_that("prose_to_cuisine ignores ingredient-context adjectives", {
+  # The Turtle Tower regression: a Vietnamese place mentioned a
+  # "Japanese whiskey drink" and the previous version tagged it as
+  # Japanese. The identity-anchored patterns now require a venue noun.
+  expect_true(is.na(prose_to_cuisine(
+    "A pho shop with a cocktail menu featuring Japanese whiskey."
+  )))
+  # Generic ingredient mentions don't fire either
+  expect_true(is.na(prose_to_cuisine(
+    "The chef uses Italian sausage and Greek yogurt."
+  )))
+})
+
+test_that("prose_to_cuisine excludes 'bistro' and 'tasting menu'", {
+  # Bistro is too generic in casual American usage ("bi-level bistro"
+  # at Zuni Cafe).
+  expect_true(is.na(prose_to_cuisine("This bi-level bistro on the corner.")))
+  # Tasting menu is a format used across many cuisines.
+  expect_true(is.na(prose_to_cuisine("They serve a 12-course tasting menu.")))
+})
+
+test_that("prose_to_cuisine handles diacritics + NA", {
+  expect_equal(
+    prose_to_cuisine("Café Soleil is a French bistro... bistros aside, this is French cuisine."),
+    "French"
+  )
+  expect_true(is.na(prose_to_cuisine(NA_character_)))
+  expect_true(is.na(prose_to_cuisine("")))
+})

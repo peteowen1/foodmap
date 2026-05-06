@@ -75,7 +75,8 @@ harmonize_sources <- function(data) {
       "price_range", "price_label", "cost_bracket", "price_inferred",
       "rating", "rating_scale", "rating_label",
       "hats", "review_date",
-      dplyr::any_of(c("n_sources", "michelin_distinction", "michelin_year"))
+      dplyr::any_of(c("n_sources", "neighborhood",
+                      "michelin_distinction", "michelin_year"))
     )
 }
 

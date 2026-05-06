@@ -144,7 +144,11 @@ cp_parse_card <- function(card) {
     name         = name %||% NA_character_,
     suburb       = suburb,
     address      = raw_addr,
-    cuisine      = NA_character_,
+    # Concrete Playground's data-item JSON doesn't carry cuisine, but
+    # the description prose almost always declares it ("Italian
+    # trattoria", "Vietnamese pho shop"). Run the same prose_to_cuisine
+    # rules used for Eater / CN Traveler.
+    cuisine      = prose_to_cuisine(description),
     category     = "Restaurant",
     description  = description,
     price_range  = NA_integer_,

@@ -199,8 +199,13 @@ build_popup_html <- function(i, geo) {
   parts <- character(0)
   parts <- c(parts, sprintf("<b>%s</b>", esc(geo$name[i])))
 
-  if (!is.na(geo$suburb[i])) {
-    parts <- c(parts, sprintf("<i>%s</i>", esc(geo$suburb[i])))
+  # Prefer the geocoder's structured neighborhood (e.g. "Mission",
+  # "Hayes Valley") over the scraper-supplied suburb when both are
+  # present and the suburb is just the city name. Falls back to
+  # whatever's available, or skips the line if both are missing.
+  loc <- popup_location(geo, i)
+  if (!is.na(loc) && nzchar(loc)) {
+    parts <- c(parts, sprintf("<i>%s</i>", esc(loc)))
   }
 
   rating <- if ("rating_label" %in% names(geo)) geo$rating_label[i] else NA
@@ -235,6 +240,32 @@ build_popup_html <- function(i, geo) {
   }
 
   paste(parts, collapse = "<br>")
+}
+
+
+#' Pick the most informative location string for a venue popup
+#'
+#' Order of preference:
+#'   1. neighborhood (structured Google Places field, e.g. "Mission")
+#'   2. suburb when it's not just the city name
+#'   3. suburb (the generic city-name fallback)
+#'
+#' Returns `NA_character_` when nothing usable is available.
+#' @noRd
+popup_location <- function(geo, i) {
+  hood <- if ("neighborhood" %in% names(geo)) geo$neighborhood[i] else NA_character_
+  suburb <- geo$suburb[i]
+  has_hood <- !is.na(hood) && nzchar(hood)
+  has_suburb <- !is.na(suburb) && nzchar(suburb)
+
+  if (has_hood && has_suburb && !identical(tolower(hood), tolower(suburb))) {
+    # Show both when they disagree - "Mission, San Francisco" reads
+    # naturally and gives city context.
+    return(paste0(hood, ", ", suburb))
+  }
+  if (has_hood) return(hood)
+  if (has_suburb) return(suburb)
+  NA_character_
 }
 
 

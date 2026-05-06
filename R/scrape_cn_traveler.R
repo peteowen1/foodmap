@@ -123,52 +123,11 @@ cnt_parse_guide <- function(html_str, city) {
 
 #' Infer cuisine from a CN Traveler editorial description
 #'
-#' CNT writes paragraph-style reviews ("airy East-meets-West space",
-#' "trattoria-style Italian"). The cuisine signal is usually a direct
-#' adjective ("Italian", "Vietnamese", "French") or a venue-type noun
-#' ("trattoria", "izakaya"). We match those first before falling back
-#' to the same dish-keyword dictionary 7x7 uses.
+#' Thin wrapper around the shared `prose_to_cuisine()` helper -
+#' keeping the named function around for backwards-compatibility with
+#' anything that imports it, but the matching rules now live in one
+#' place across scrapers.
 #' @noRd
 cnt_description_to_cuisine <- function(description) {
-  if (is.na(description) || !nzchar(description)) return(NA_character_)
-  text <- tolower(description)
-  text <- tryCatch(
-    stringi::stri_trans_general(text, "Latin-ASCII"),
-    error = function(e) text
-  )
-  # Adjective / venue-type matches - more authoritative than dish names
-  # because writers explicitly tag a place as "Italian" / "Vietnamese".
-  patterns <- list(
-    Italian        = "\\b(italian|trattoria|osteria|enoteca)\\b",
-    Vietnamese     = "\\b(vietnamese)\\b",
-    Chinese        = "\\b(chinese|cantonese|sichuan|szechuan)\\b",
-    Japanese       = "\\b(japanese|izakaya|kaiseki)\\b",
-    French         = "\\b(french|bistro|brasserie|patisserie|boulangerie)\\b",
-    Korean         = "\\b(korean)\\b",
-    Thai           = "\\b(thai)\\b",
-    Indian         = "\\b(indian)\\b",
-    Mexican        = "\\b(mexican|taqueria)\\b",
-    Greek          = "\\b(greek|mediterranean)\\b",
-    `Middle Eastern` = "\\b(middle eastern|lebanese|persian|iranian|turkish|arab(ic)?|israeli)\\b",
-    Spanish        = "\\b(spanish|tapas)\\b",
-    Burmese        = "\\b(burmese)\\b",
-    Filipino       = "\\b(filipino|pinoy)\\b",
-    Ethiopian      = "\\b(ethiopian)\\b",
-    Californian    = "\\b(californian|farm-to-table|farm to table)\\b",
-    Seafood        = "\\b(seafood|oyster bar)\\b",
-    Steakhouse     = "\\b(steakhouse|chophouse)\\b",
-    Pizza          = "\\b(pizzeria|pizza)\\b",
-    `Bakery/Cafe`  = "\\b(bakery|patisserie|cafe)\\b",
-    Coffee         = "\\b(coffee shop|coffee bar|roaster)\\b"
-  )
-  for (cuisine in names(patterns)) {
-    if (grepl(patterns[[cuisine]], text, perl = TRUE)) return(cuisine)
-  }
-  # No dish-keyword fallback: CNT's editorial prose mentions many
-  # ingredients in passing ("the tacos are great, alongside the
-  # pasta..."), and applying the 7x7 dish dictionary tagged places
-  # like Rich Table as Mexican because the review described one item.
-  # Adjective-only matches keep precision high at the cost of leaving
-  # ~5/26 rows un-tagged.
-  NA_character_
+  prose_to_cuisine(description)
 }

@@ -28,16 +28,24 @@
 #'   the post-validation rectangle - much stricter than the country
 #'   bbox, so same-named venues in other cities (Sai's in NYC vs SF)
 #'   can't slip through. Defaults to `NULL` (country-only bias).
+#' @param migrate_neighborhoods Logical. If `TRUE`, any cache row that
+#'   has coordinates but is missing `neighborhood` gets re-geocoded so
+#'   the new structured neighborhood field can be filled in. One-time
+#'   cost the first time you run after the field was added; subsequent
+#'   runs are no-ops because every cached row will have a value (even
+#'   if `NA` - meaning Google didn't return one). Default `FALSE`.
 #'
-#' @return The input tibble with `latitude`, `longitude`, `formatted_address`,
-#'   and `place_id` columns populated.
+#' @return The input tibble with `latitude`, `longitude`,
+#'   `formatted_address`, `place_id`, and `neighborhood` columns
+#'   populated.
 #' @export
 geocode_restaurants <- function(restaurants,
                                 api_key = NULL,
                                 cache_path = "cache/geocodes.csv",
                                 force_refresh = FALSE,
                                 country = "AU",
-                                city = NULL) {
+                                city = NULL,
+                                migrate_neighborhoods = FALSE) {
 
   restaurants <- ensure_geocode_cols(restaurants)
 
@@ -45,6 +53,27 @@ geocode_restaurants <- function(restaurants,
   if (!is.null(cache_path) && !force_refresh && file.exists(cache_path)) {
     restaurants <- geocode_cache_apply(restaurants, cache_path, country,
                                        city = city)
+  }
+
+  # When migrating, treat any row whose neighborhood is missing as
+  # "needs geocoding" even if coords are already filled. Clearing
+  # latitude here forces the loop below to re-fetch via the API,
+  # picking up the structured addressComponents this time.
+  if (isTRUE(migrate_neighborhoods)) {
+    if (!"neighborhood" %in% names(restaurants)) {
+      restaurants$neighborhood <- NA_character_
+    }
+    # NA means "never tried"; "" means "tried, Google returned no
+    # neighborhood for this venue" (typical for AU venues). Only the
+    # NA case is stale - the sentinel is final.
+    stale <- !is.na(restaurants$latitude) & is.na(restaurants$neighborhood)
+    if (any(stale)) {
+      cli::cli_alert_info(
+        "Migrating {sum(stale)} cached venue{?s} to capture neighborhood"
+      )
+      restaurants$latitude[stale]  <- NA_real_
+      restaurants$longitude[stale] <- NA_real_
+    }
   }
 
   needs_geocoding <- is.na(restaurants$latitude) | is.na(restaurants$longitude)
@@ -74,6 +103,7 @@ geocode_restaurants <- function(restaurants,
       restaurants$longitude[i]         <- result$lng
       restaurants$formatted_address[i] <- result$address
       restaurants$place_id[i]          <- result$place_id
+      restaurants$neighborhood[i]      <- result$neighborhood
     }
 
     cli::cli_progress_update()
@@ -89,7 +119,20 @@ geocode_restaurants <- function(restaurants,
     cli::cli_warn("{n_missing} venue{?s} could not be geocoded")
   }
 
-  # Step 3 -- persist the (now expanded) coordinate set to the cache
+  # Step 3 -- backfill source-NA addresses with the geocoder's
+  # formatted address. Sources like Sprudge intentionally leave
+  # address blank because they don't publish structured location
+  # data; once Google has resolved the venue we have a clean string
+  # to use everywhere downstream (CSV, KML popups, future filters).
+  if ("address" %in% names(restaurants) &&
+      "formatted_address" %in% names(restaurants)) {
+    fill <- is.na(restaurants$address) & !is.na(restaurants$formatted_address)
+    if (any(fill)) {
+      restaurants$address[fill] <- restaurants$formatted_address[fill]
+    }
+  }
+
+  # Step 4 -- persist the (now expanded) coordinate set to the cache
   if (!is.null(cache_path)) geocode_cache_write(restaurants, cache_path)
 
   restaurants
@@ -101,7 +144,10 @@ geocode_cache_apply <- function(restaurants, cache_path, country = NULL,
                                 city = NULL) {
   cached <- tryCatch(
     utils::read.csv(cache_path, stringsAsFactors = FALSE,
-                    na.strings = c("", "NA")),
+                    # Don't conflate "" with NA - we use empty
+                    # strings as the "tried-but-empty" sentinel for
+                    # neighborhood, distinct from "never tried" (NA).
+                    na.strings = "NA"),
     error = function(e) NULL
   )
   required <- c("name", "suburb", "latitude", "longitude")
@@ -110,7 +156,8 @@ geocode_cache_apply <- function(restaurants, cache_path, country = NULL,
   }
   cache_cols <- intersect(
     names(cached),
-    c("name", "suburb", "latitude", "longitude", "formatted_address", "place_id")
+    c("name", "suburb", "latitude", "longitude",
+      "formatted_address", "place_id", "neighborhood")
   )
   cached <- cached[!is.na(cached$latitude), cache_cols, drop = FALSE]
   cached <- cached[!duplicated(cached[, c("name", "suburb")]), , drop = FALSE]
@@ -161,10 +208,12 @@ geocode_cache_apply <- function(restaurants, cache_path, country = NULL,
 #' Persist successfully-geocoded rows to the cache CSV (upserting by name+suburb)
 #' @noRd
 geocode_cache_write <- function(restaurants, cache_path) {
+  cols <- c("name", "suburb", "latitude", "longitude",
+            "formatted_address", "place_id", "neighborhood")
+  cols <- intersect(cols, names(restaurants))
   rows <- restaurants[
     !is.na(restaurants$latitude) & !is.na(restaurants$longitude),
-    c("name", "suburb", "latitude", "longitude",
-      "formatted_address", "place_id")
+    cols
   ]
   if (nrow(rows) == 0) return(invisible(NULL))
   rows <- rows[!duplicated(rows[, c("name", "suburb")]), , drop = FALSE]
@@ -172,10 +221,22 @@ geocode_cache_write <- function(restaurants, cache_path) {
   if (file.exists(cache_path)) {
     existing <- tryCatch(
       utils::read.csv(cache_path, stringsAsFactors = FALSE,
-                      na.strings = c("", "NA")),
+                      # Don't conflate "" with NA - we use empty
+                    # strings as the "tried-but-empty" sentinel for
+                    # neighborhood, distinct from "never tried" (NA).
+                    na.strings = "NA"),
       error = function(e) NULL
     )
     if (!is.null(existing) && all(c("name", "suburb") %in% names(existing))) {
+      # rows_upsert requires y's columns to be a subset of x's. When
+      # we add a new field (e.g. neighborhood), the old cache CSV
+      # lacks that column - back-fill it as NA before upserting.
+      missing_cols <- setdiff(names(rows), names(existing))
+      for (mc in missing_cols) {
+        existing[[mc]] <- if (is.character(rows[[mc]])) NA_character_
+                          else if (is.numeric(rows[[mc]])) NA_real_
+                          else NA
+      }
       merged <- dplyr::rows_upsert(existing, rows, by = c("name", "suburb"))
     } else {
       merged <- rows
@@ -197,6 +258,9 @@ ensure_geocode_cols <- function(df) {
   }
   if (!"place_id" %in% names(df)) {
     df$place_id <- NA_character_
+  }
+  if (!"neighborhood" %in% names(df)) {
+    df$neighborhood <- NA_character_
   }
   df
 }
@@ -267,7 +331,11 @@ places_text_search <- function(query, api_key, country = "AU", city = NULL) {
       httr2::req_headers(
         `Content-Type`     = "application/json",
         `X-Goog-Api-Key`   = api_key,
-        `X-Goog-FieldMask` = "places.location,places.formattedAddress,places.id"
+        # addressComponents is free in API quota terms - it just adds
+        # more data per response - and gives us the structured
+        # neighborhood / sublocality fields the formatted address
+        # doesn't include.
+        `X-Goog-FieldMask` = "places.location,places.formattedAddress,places.addressComponents,places.id"
       ) |>
       httr2::req_body_json(body) |>
       httr2::req_retry(max_tries = 2) |>
@@ -300,10 +368,11 @@ places_text_search <- function(query, api_key, country = "AU", city = NULL) {
     lng <- p$location$longitude
     if (isTRUE(in_region(lat, lng))) {
       return(list(
-        lat      = lat,
-        lng      = lng,
-        address  = p$formattedAddress %||% NA_character_,
-        place_id = p$id %||% NA_character_
+        lat          = lat,
+        lng          = lng,
+        address      = p$formattedAddress %||% NA_character_,
+        place_id     = p$id %||% NA_character_,
+        neighborhood = neighborhood_from_components(p$addressComponents)
       ))
     }
   }
@@ -311,4 +380,41 @@ places_text_search <- function(query, api_key, country = "AU", city = NULL) {
   region_label <- city %||% country %||% "matching"
   cli::cli_warn("No {region_label} results for {.val {query}}")
   NULL
+}
+
+
+#' Pull a neighborhood (or sublocality) string out of Google's
+#' addressComponents array.
+#'
+#' Google ranks the components by specificity. We prefer the most
+#' granular tag in this order:
+#'   1. neighborhood (most specific, e.g. "Hayes Valley")
+#'   2. sublocality_level_1 (e.g. "Mission")
+#'   3. sublocality (rare; usually duplicates the above)
+#'
+#' Returns `NA_character_` when none of those types are present in
+#' the response (typical for venues outside dense urban areas).
+#' @noRd
+neighborhood_from_components <- function(components) {
+  empty_sentinel <- ""  # See note below
+  if (!is.list(components) || length(components) == 0) return(empty_sentinel)
+  preferred <- c("neighborhood", "sublocality_level_1", "sublocality")
+  for (want in preferred) {
+    for (c in components) {
+      types <- c$types
+      if (is.list(types)) types <- unlist(types)
+      if (want %in% types) {
+        val <- c$longText %||% c$shortText %||% NA_character_
+        if (!is.na(val) && nzchar(val)) return(val)
+      }
+    }
+  }
+  # Empty string (not NA) is the "tried, nothing found" sentinel.
+  # AU venues never have neighborhood/sublocality components - suburbs
+  # are the neighborhood-equivalent there - so without a sentinel
+  # every Sydney/Melbourne row would re-trigger
+  # migrate_neighborhoods on every subsequent run, wasting API spend.
+  # popup_location() and the migrate stale check treat "" as
+  # "definitively no neighborhood for this venue".
+  empty_sentinel
 }
