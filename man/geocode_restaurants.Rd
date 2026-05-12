@@ -10,7 +10,8 @@ geocode_restaurants(
   cache_path = "cache/geocodes.csv",
   force_refresh = FALSE,
   country = "AU",
-  city = NULL
+  city = NULL,
+  migrate_neighborhoods = FALSE
 )
 }
 \arguments{
@@ -43,10 +44,18 @@ etc. for other regions.}
 the post-validation rectangle - much stricter than the country
 bbox, so same-named venues in other cities (Sai's in NYC vs SF)
 can't slip through. Defaults to \code{NULL} (country-only bias).}
+
+\item{migrate_neighborhoods}{Logical. If \code{TRUE}, any cache row that
+has coordinates but is missing \code{neighborhood} gets re-geocoded so
+the new structured neighborhood field can be filled in. One-time
+cost the first time you run after the field was added; subsequent
+runs are no-ops because every cached row will have a value (even
+if \code{NA} - meaning Google didn't return one). Default \code{FALSE}.}
 }
 \value{
-The input tibble with \code{latitude}, \code{longitude}, \code{formatted_address},
-and \code{place_id} columns populated.
+The input tibble with \code{latitude}, \code{longitude},
+\code{formatted_address}, \code{place_id}, and \code{neighborhood} columns
+populated.
 }
 \description{
 For rows missing latitude/longitude, queries the Google Places API (New)
