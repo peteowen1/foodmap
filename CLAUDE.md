@@ -15,7 +15,13 @@ devtools::check()                 # Full R CMD check
 devtools::test()                  # Run testthat test suite (169 tests)
 ```
 
-CI: GitHub Actions runs `R CMD check` on push/PR to master.
+CI: GitHub Actions runs `R CMD check` on push/PR to `main`.
+
+## Git workflow
+
+Solo repo: commit and push **directly to `main`** — no pull request or
+feature branch needed. This overrides the PR-only rule in the global
+`~/.claude/CLAUDE.md`. (Still only commit/push when explicitly asked.)
 
 ## Architecture
 
