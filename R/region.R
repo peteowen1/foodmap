@@ -72,14 +72,25 @@ country_bbox <- function(country) {
 }
 
 
-#' Tight bounding box for a city, used by the geocoder when a country
-#' bbox is too loose to disambiguate same-named venues (e.g. "Sai's"
-#' in SF vs NYC). Returns NULL if no city-level bias is registered;
-#' callers fall back to the country bbox.
+#' Drive-time reach bounding box for a city
 #'
-#' Boxes are deliberately generous to cover the whole metro area
-#' (East Bay + North Bay for SF; Greater Sydney etc.) so that
-#' suburb-level scatter doesn't cause false rejections.
+#' Defines how far out from a city the map should reach. Venues that
+#' geocode inside this box are kept; venues outside it are rejected and
+#' left without coordinates (so they drop off the KML/HTML map). The box
+#' is also handed to the Places API as `locationBias` and still acts as
+#' a coarse disambiguation guard - a Sydney query can't resolve to the
+#' US, an SF query can't resolve to NYC.
+#'
+#' These were originally tight *metro* boxes whose only job was
+#' disambiguation. They've since been widened to roughly a few hours'
+#' drive of the city so regional venues the city guides legitimately
+#' list (the NSW South Coast, the Great Ocean Road, Napa / Monterey)
+#' survive geocoding instead of being silently dropped. Returns NULL if
+#' no box is registered; callers fall back to the country bbox.
+#'
+#' Note: a rectangle over-reaches at the corners (its diagonal extent
+#' exceeds the intended drive radius), but venue data is sparse enough
+#' that this is harmless in practice.
 #' @noRd
 city_bbox <- function(city) {
   if (is.null(city) || is.na(city)) return(NULL)
@@ -91,16 +102,16 @@ city_bbox <- function(city) {
     city
   )
   switch(city,
-    `san-francisco` = list(lat = c(37.20, 38.20), lng = c(-123.10, -121.80)),
-    # Greater Sydney: Penrith/Campbelltown west to Manly/Bondi east,
-    # Hornsby north to Sutherland south. Generous enough to cover
-    # outer-suburb venues without bleeding into the Central Coast or
-    # Wollongong (which the country bbox would happily allow).
-    sydney          = list(lat = c(-34.20, -33.50), lng = c(150.50, 151.40)),
-    # Greater Melbourne: covers everything from Werribee to Lilydale
-    # and Frankston up to the city centre. Tight enough to keep
-    # Geelong / Mornington Peninsula venues out.
-    melbourne       = list(lat = c(-38.20, -37.55), lng = c(144.50, 145.50)),
+    # San Francisco + ~2h drive: south to Santa Cruz / Monterey, north
+    # to Napa / Sonoma / Healdsburg, east to Sacramento. Kept tighter
+    # than the AU cities because the Bay Area is ringed by other metros.
+    `san-francisco` = list(lat = c(36.40, 38.90), lng = c(-123.30, -121.00)),
+    # Sydney + ~4h drive: south down the coast past Ulladulla to
+    # Bermagui, north to Port Macquarie, inland west to Orange / Mudgee.
+    sydney          = list(lat = c(-36.60, -31.00), lng = c(148.50, 153.20)),
+    # Melbourne + ~4h drive: the Mornington Peninsula and Great Ocean
+    # Road south, Bendigo / Echuca north, east into Gippsland.
+    melbourne       = list(lat = c(-39.00, -35.80), lng = c(142.00, 148.50)),
     NULL
   )
 }
