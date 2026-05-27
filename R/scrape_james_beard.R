@@ -1,22 +1,19 @@
-#' James Beard Awards - SF / Bay Area recognised restaurants
+#' James Beard Awards - JBA-recognised restaurants by city
 #'
-#' Returns a hand-curated list of San Francisco / Bay Area restaurants
-#' that have been winners or finalists for major James Beard Awards
-#' across recent years. The JBA site itself uses client-side rendering
-#' that defeats static HTML scraping (Next.js BAILOUT_TO_CLIENT_SIDE),
-#' so this source mirrors the SMH GFG awards pattern: an embedded
-#' tribble that's hand-updated annually. The data is small, public,
-#' and authoritative.
+#' Returns a hand-curated list of restaurants that have been winners
+#' or finalists for major James Beard Awards across recent years. The
+#' JBA site itself uses client-side rendering that defeats static
+#' HTML scraping (Next.js BAILOUT_TO_CLIENT_SIDE), so this source
+#' mirrors the SMH GFG awards pattern: an embedded tribble that's
+#' hand-updated annually. The data is small, public, and
+#' authoritative.
 #'
-#' Categories included:
-#' - Outstanding Restaurant (winners and finalists)
-#' - Outstanding Chef (winners and finalists, restaurant attributed)
-#' - Best Chef: California (winners and finalists)
-#' - Best New Restaurant (winners and finalists in SF area)
-#' - Outstanding Hospitality (winners and finalists in SF area)
+#' Cities and the JBA regional category that covers them:
+#' - `"san-francisco"` - Best Chef: California / West
+#' - `"honolulu"` - Best Chef: Northwest & Pacific + America's Classics
 #'
-#' @param city Character. Currently `"san-francisco"`. Default
-#'   `"san-francisco"`.
+#' @param city Character. One of `"san-francisco"`, `"honolulu"`.
+#'   Default `"san-francisco"`.
 #' @return A tibble with the standard scraper schema plus an
 #'   `award_year` column (most recent year recognised).
 #' @export
@@ -40,6 +37,7 @@ scrape_james_beard <- function(city = "san-francisco") {
 #' recognition), award (winner / finalist).
 #' @noRd
 jba_records <- function(city) {
+  if (city == "honolulu") return(jba_records_honolulu())
   if (city != "san-francisco") {
     cli::cli_abort("No JBA list for {.val {city}}")
   }
@@ -79,6 +77,42 @@ jba_records <- function(city) {
     # geocoder doesn't waste an API call rejecting it.
     "Benu",               "SoMa",          "Outstanding Service",    2017L, "Winner",   "Contemporary American",
     "Acquerello",         "Polk Gulch",    "Outstanding Wine Service",2018L,"Finalist", "Italian"
+  )
+}
+
+
+#' Hand-curated JBA Honolulu / Oʻahu recognition list
+#'
+#' Best Chef: Northwest & Pacific is the regional JBA category that
+#' includes Hawaiʻi; America's Classics is the lifetime-recognition
+#' category that has named several long-running local institutions.
+#' Both are public, well-documented and stable enough for a static
+#' embed.
+#'
+#' Kept deliberately conservative - only entries that have been
+#' widely reported in multiple sources. Outer-island chefs and
+#' venues (Maui, Big Island, Kauaʻi) are omitted because they fall
+#' outside the Honolulu city bbox and the geocoder would discard
+#' them anyway.
+#' @noRd
+jba_records_honolulu <- function() {
+  tibble::tribble(
+    ~name,                ~suburb,         ~category,                          ~year, ~award,    ~cuisine,
+    # America's Classics - JBA's lifetime-recognition category for
+    # long-running local institutions
+    "Helena's Hawaiian Food", "Kalihi",     "America's Classics",               2000L, "Winner",   "Hawaiian",
+    # Best Chef: Northwest & Pacific (covers AK/HI/OR/WA)
+    "Fete",                "Chinatown",     "Best Chef: Northwest & Pacific",   2022L, "Winner",   "Contemporary American",
+    "Senia",               "Chinatown",     "Best Chef: Northwest & Pacific",   2018L, "Finalist", "Contemporary American",
+    "The Pig and The Lady","Chinatown",     "Best Chef: Northwest & Pacific",   2019L, "Finalist", "Vietnamese",
+    "MW Restaurant",       "Ala Moana",     "Best Chef: Northwest & Pacific",   2019L, "Finalist", "Contemporary American",
+    "Koko Head Cafe",      "Kaimuk\u012B",       "Best Chef: Northwest & Pacific",   2017L, "Finalist", "Brunch",
+    "Mud Hen Water",       "Kaimuk\u012B",       "Best Chef: Northwest & Pacific",   2017L, "Finalist", "Contemporary American",
+    # Best New Restaurant finalists
+    "Senia",               "Chinatown",     "Best New Restaurant",              2017L, "Finalist", "Contemporary American",
+    # Outstanding Restaurant historical recognitions
+    "La Mer",              "Waik\u012Bk\u012B",       "Outstanding Restaurant",           2015L, "Finalist", "French",
+    "Chef Mavro",          "Ala Moana",     "Outstanding Restaurant",           2014L, "Finalist", "Contemporary American"
   )
 }
 

@@ -32,8 +32,15 @@ scrape_infatuation <- function(city = "san-francisco",
   guides <- unique(c(infatuation_default_guides(city), extra_guides))
   cli::cli_alert_info("Fetching {length(guides)} guide{?s}")
 
+  # The Infatuation's URL slug doesn't always match the city slug we
+  # use as our dispatcher key. Honolulu's guides live under
+  # `/oahu/guides/...` because the publication groups its Hawai'i
+  # coverage by island. Resolved here so other call sites stay
+  # city-keyed.
+  url_city <- infatuation_url_city(city)
+
   results <- purrr::map(guides, function(slug) {
-    url <- paste0("https://www.theinfatuation.com/", city, "/guides/", slug)
+    url <- paste0("https://www.theinfatuation.com/", url_city, "/guides/", slug)
     cli::cli_alert_info("  {.url {url}}")
     Sys.sleep(RATE_LIMIT_SECS)
     html_str <- tryCatch(
@@ -90,7 +97,30 @@ infatuation_default_guides <- function(city) {
       "great-savory-croissants-sf",
       "pop-up-bakeries-san-francisco"
     ),
+    # Honolulu lives under /oahu/guides/. The Infatuation publishes
+    # only two Honolulu guides as of late 2025 (one restaurants, one
+    # bars), so the default set is much smaller than SF's. Both pages
+    # embed the same JSON-LD ItemList shape that the SF parser already
+    # handles, so no code changes are needed beyond URL routing.
+    honolulu = c(
+      "best-restaurants-oahu-honolulu-waikiki-hawaii",
+      "best-bars-honolulu"
+    ),
     cli::cli_abort("No default Infatuation guides for {.val {city}}")
+  )
+}
+
+
+#' Map our city slug to the path segment The Infatuation uses
+#'
+#' Most cities are 1:1 (`san-francisco` -> `san-francisco`), but
+#' Honolulu lives under the island grouping (`oahu`) on their site.
+#' @noRd
+infatuation_url_city <- function(city) {
+  switch(city,
+    `san-francisco` = "san-francisco",
+    honolulu        = "oahu",
+    cli::cli_abort("No Infatuation URL mapping for {.val {city}}")
   )
 }
 

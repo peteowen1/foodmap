@@ -40,7 +40,7 @@ city_country <- function(city) {
   # geocoding picks the right country bias.
   au_cities <- c("sydney", "melbourne", "brisbane", "adelaide", "perth",
                  "hobart", "canberra", "darwin", "gold-coast")
-  us_cities <- c("san-francisco")
+  us_cities <- c("san-francisco", "honolulu")
   uk_cities <- character()
 
   if (city %in% au_cities) return("AU")
@@ -112,6 +112,14 @@ city_bbox <- function(city) {
     # Melbourne + ~4h drive: the Mornington Peninsula and Great Ocean
     # Road south, Bendigo / Echuca north, east into Gippsland.
     melbourne       = list(lat = c(-39.00, -35.80), lng = c(142.00, 148.50)),
+    # Honolulu / O'ahu island. Tight around O'ahu only - guides
+    # routinely shout out Maui / Big Island / Kaua'i venues (e.g.
+    # Mama's Fish House, Merriman's, The Beach House) that aren't
+    # day-trippable, so we let the bbox filter them out instead of
+    # pretending the map covers all of Hawai'i. O'ahu spans roughly
+    # 21.25-21.75 N / -158.30 to -157.65 W; we widen slightly to keep
+    # the windward / North Shore venues comfortably inside.
+    honolulu        = list(lat = c(21.20, 21.78), lng = c(-158.35, -157.60)),
     NULL
   )
 }

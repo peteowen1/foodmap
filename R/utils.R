@@ -82,7 +82,8 @@ valid_sources <- function() {
   c("broadsheet", "gourmet_traveller", "timeout", "urban_list", "agfg",
     "good_food_guide", "gfg_awards", "concrete_playground",
     "infatuation", "eater", "7x7", "cn_traveler", "james_beard",
-    "michelin", "sprudge")
+    "michelin", "sprudge", "thrillist", "honolulu_magazine",
+    "hale_aina")
 }
 
 #' Cities supported by a given source
@@ -98,13 +99,16 @@ supported_cities_for_source <- function(source) {
     good_food_guide     = c("sydney", "melbourne"),
     gfg_awards          = "sydney",
     concrete_playground = c("sydney", "melbourne"),
-    infatuation         = "san-francisco",
+    infatuation         = c("san-francisco", "honolulu"),
     eater               = "san-francisco",
     `7x7`               = "san-francisco",
     cn_traveler         = "san-francisco",
-    james_beard         = "san-francisco",
+    james_beard         = c("san-francisco", "honolulu"),
     michelin            = "san-francisco",
     sprudge             = "san-francisco",
+    thrillist           = "honolulu",
+    honolulu_magazine   = "honolulu",
+    hale_aina           = "honolulu",
     cli::cli_abort("Unknown source: {.val {source}}")
   )
 }
@@ -122,24 +126,39 @@ validate_city_source <- function(city, source) {
   city
 }
 
-#' Decode common HTML entities found in scraped JSON-LD payloads
+#' Decode common HTML entities found in scraped content
 #'
-#' Concrete Playground and The Infatuation both encode apostrophes,
-#' ampersands and quotes as HTML entities inside their JSON-LD strings
-#' (e.g. `Emmy&apos;s Spaghetti Shack`). This helper handles the few
-#' that come up in practice without pulling in an XML/HTML parser
-#' just for entity decoding.
+#' Concrete Playground, The Infatuation and HONOLULU Magazine all
+#' emit a mix of named and numeric HTML entities (`&apos;`,
+#' `&lsquo;`, `&#x27;`, etc.) instead of the literal characters.
+#' This helper covers the entities that turn up in practice without
+#' pulling in an XML/HTML parser just for entity decoding.
 #' @noRd
 decode_html_entities <- function(x) {
   if (is.na(x)) return(x)
   x |>
-    gsub("&#039;", "'",  x = _, fixed = TRUE) |>
-    gsub("&#39;",  "'",  x = _, fixed = TRUE) |>
-    gsub("&apos;", "'",  x = _, fixed = TRUE) |>
-    gsub("&amp;",  "&",  x = _, fixed = TRUE) |>
-    gsub("&quot;", "\"", x = _, fixed = TRUE) |>
-    gsub("&lt;",   "<",  x = _, fixed = TRUE) |>
-    gsub("&gt;",   ">",  x = _, fixed = TRUE)
+    # Apostrophes / single quotes - straight and curly forms
+    gsub("&#039;",  "'", x = _, fixed = TRUE) |>
+    gsub("&#39;",   "'", x = _, fixed = TRUE) |>
+    gsub("&#x27;",  "'", x = _, fixed = TRUE) |>
+    gsub("&apos;",  "'", x = _, fixed = TRUE) |>
+    gsub("&lsquo;", "\u2018", x = _, fixed = TRUE) |>
+    gsub("&rsquo;", "\u2019", x = _, fixed = TRUE) |>
+    gsub("&#8216;", "\u2018", x = _, fixed = TRUE) |>
+    gsub("&#8217;", "\u2019", x = _, fixed = TRUE) |>
+    # Double quotes - straight and curly
+    gsub("&quot;",  "\"", x = _, fixed = TRUE) |>
+    gsub("&ldquo;", "\u201C", x = _, fixed = TRUE) |>
+    gsub("&rdquo;", "\u201D", x = _, fixed = TRUE) |>
+    # Em/en dashes, ellipsis, non-breaking space
+    gsub("&mdash;", "\u2014", x = _, fixed = TRUE) |>
+    gsub("&ndash;", "\u2013", x = _, fixed = TRUE) |>
+    gsub("&hellip;", "\u2026", x = _, fixed = TRUE) |>
+    gsub("&nbsp;",  " ", x = _, fixed = TRUE) |>
+    # Structural entities (do amp last so we don't double-decode)
+    gsub("&lt;",   "<", x = _, fixed = TRUE) |>
+    gsub("&gt;",   ">", x = _, fixed = TRUE) |>
+    gsub("&amp;",  "&", x = _, fixed = TRUE)
 }
 
 #' Build an empty restaurant tibble with the standard schema

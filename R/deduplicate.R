@@ -114,7 +114,19 @@ deduplicate_restaurants <- function(restaurants) {
   restaurants$suburb_norm[is.na(restaurants$suburb) |
                           restaurants$suburb_norm == ""] <- NA_character_
 
-  # Pass 1 - exact normalized name + suburb (treat NA suburb as wildcard)
+  # Pass 1 - exact normalized name + suburb. A suburb is "wildcard"
+  # for matching purposes when it's NA OR when it's a generic
+  # city-level fallback ("San Francisco", "Honolulu", "California
+  # 94107"). Several sources default suburb to the city when they
+  # don't know the neighborhood (Infatuation, CN Traveler, Sprudge,
+  # Michelin), so those rows would otherwise never merge with a
+  # specific-neighborhood row from a sibling source. Within a single
+  # city scrape, two venues sharing a normalised name are almost
+  # always the same place, so wildcard-merging on generic suburbs is
+  # the right tradeoff.
+  is_wildcard_suburb <- is.na(restaurants$suburb_norm) |
+    vapply(restaurants$suburb, function(s) is_generic_suburb(s), logical(1))
+
   groups <- list()
   assigned <- rep(FALSE, nrow(restaurants))
 
@@ -123,10 +135,10 @@ deduplicate_restaurants <- function(restaurants) {
 
     name_i <- restaurants$name_norm[i]
     suburb_i <- restaurants$suburb_norm[i]
+    wildcard_i <- is_wildcard_suburb[i]
 
-    # Find all matches: names must be identical, suburbs must match or be NA
     name_match <- restaurants$name_norm == name_i
-    suburb_match <- is.na(restaurants$suburb_norm) | is.na(suburb_i) |
+    suburb_match <- is_wildcard_suburb | wildcard_i |
       restaurants$suburb_norm == suburb_i
     matches <- which(name_match & suburb_match & !assigned)
 
@@ -382,6 +394,7 @@ is_generic_suburb <- function(s) {
   s_norm <- tolower(stringr::str_squish(s))
   city_names <- c(
     "san francisco", "new york", "los angeles", "chicago", "boston",
+    "honolulu",
     "sydney", "melbourne", "brisbane", "adelaide", "perth", "hobart",
     "canberra", "darwin", "gold coast"
   )
