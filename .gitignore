@@ -4,6 +4,7 @@ output/
 *.kml
 .claude/
 cache/
+docs/*_files/
 .Rproj.user
 .Rhistory
 .positai
