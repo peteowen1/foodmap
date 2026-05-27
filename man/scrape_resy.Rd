@@ -10,8 +10,8 @@ scrape_resy(city = "new-york", use_cache = FALSE)
 \item{city}{Character. Lowercase city slug. Currently supported:
 \code{"new-york"}, \code{"los-angeles"}. Default \code{"new-york"}.}
 
-\item{use_cache}{Logical. Cache the Hit List page for 24h via
-\code{\link[=cached_fetch]{cached_fetch()}}. Default \code{FALSE}.}
+\item{use_cache}{Logical. Cache the Hit List page for 24h via the
+package's internal \code{cached_fetch()} helper. Default \code{FALSE}.}
 }
 \value{
 A tibble with the standard scraper schema. Latitude /

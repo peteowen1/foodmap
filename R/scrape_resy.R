@@ -16,8 +16,8 @@
 #'
 #' @param city Character. Lowercase city slug. Currently supported:
 #'   `"new-york"`, `"los-angeles"`. Default `"new-york"`.
-#' @param use_cache Logical. Cache the Hit List page for 24h via
-#'   [cached_fetch()]. Default `FALSE`.
+#' @param use_cache Logical. Cache the Hit List page for 24h via the
+#'   package's internal `cached_fetch()` helper. Default `FALSE`.
 #'
 #' @return A tibble with the standard scraper schema. Latitude /
 #'   longitude come straight from the page DOM so no geocoder call is

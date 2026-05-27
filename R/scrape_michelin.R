@@ -129,6 +129,9 @@ scrape_michelin <- function(city = "san-francisco",
 michelin_listing_url <- function(city) {
   switch(city,
     `san-francisco` = "https://guide.michelin.com/us/en/california/san-francisco/restaurants",
+    `new-york`      = "https://guide.michelin.com/us/en/new-york-state/new-york/restaurants",
+    `los-angeles`   = "https://guide.michelin.com/us/en/california/los-angeles/restaurants",
+    london          = "https://guide.michelin.com/gb/en/greater-london/london/restaurants",
     cli::cli_abort("No Michelin Guide URL configured for {.val {city}}")
   )
 }
@@ -141,13 +144,16 @@ michelin_listing_url <- function(city) {
 #' and states (e.g. New York from the SF listing). Without filtering,
 #' those leak into our discovered URL set and get scraped as if they
 #' belonged to the city. Each city resolves to the path prefix we keep
-#' -- for SF that's the whole California region, since the SF Michelin
-#' Guide legitimately covers Bay Area satellites (Berkeley, Oakland,
-#' Healdsburg, etc.).
+#' -- for SF that's the whole California region (which legitimately
+#' covers Bay Area satellites). LA reuses the California prefix; NYC
+#' is locked to the state path; London is locked to greater-london.
 #' @noRd
 michelin_url_prefix <- function(city) {
   switch(city,
     `san-francisco` = "/us/en/california/",
+    `los-angeles`   = "/us/en/california/",
+    `new-york`      = "/us/en/new-york-state/",
+    london          = "/gb/en/greater-london/",
     cli::cli_abort("No Michelin URL prefix configured for {.val {city}}")
   )
 }

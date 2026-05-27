@@ -57,19 +57,26 @@ scrape_eater <- function(city = "san-francisco",
 
 
 #' Per-city Eater subdomain
+#'
+#' Each Eater city edition lives on its own subdomain
+#' (`sf.eater.com`, `ny.eater.com`, `la.eater.com`, `london.eater.com`).
 #' @noRd
 eater_base_url <- function(city) {
   switch(city,
     `san-francisco` = "https://sf.eater.com",
+    `new-york`      = "https://ny.eater.com",
+    `los-angeles`   = "https://la.eater.com",
+    london          = "https://london.eater.com",
     cli::cli_abort("Unknown Eater city {.val {city}}")
   )
 }
 
 #' Default map slugs per city
 #'
-#' For SF: Essential 38, Heatmap (newest spots), brunch, pizza, steak,
-#' and a few other key categories. Failures (404s) for individual
-#' slugs are logged but don't abort the overall scrape.
+#' Each city's Essential 38 list plus a handful of category guides
+#' that broaden coverage (brunch, pizza, coffee, etc.). Failures
+#' (404s) for individual slugs are logged but don't abort the
+#' overall scrape, so a defunct guide just drops out of the union.
 #' @noRd
 eater_default_guides <- function(city) {
   switch(city,
@@ -79,12 +86,38 @@ eater_default_guides <- function(city) {
       "best-brunch-san-francisco",
       "best-pizza-san-francisco",
       "best-steakhouses-san-francisco",
-      # Coffee / ice cream guides for cafe-side coverage. Eater SF
-      # doesn't publish a separate bakery map (the existing "best
-      # bakeries" slug 404s), so cafe coverage relies on coffee +
-      # crossover from the Infatuation slugs above.
       "best-coffee-shops-san-francisco",
       "best-ice-cream-san-francisco"
+    ),
+    `new-york` = c(
+      "best-new-york-restaurants-38-map",
+      "best-new-restaurants-nyc",
+      "best-pizza-nyc-restaurants",
+      "best-italian-restaurants-nyc",
+      "best-sushi-restaurants-nyc",
+      "best-ramen-nyc-restaurants",
+      "best-brunch-restaurants-nyc",
+      "best-coffee-shops-nyc",
+      "best-bagels-nyc"
+    ),
+    `los-angeles` = c(
+      "best-los-angeles-restaurants-eater-38-essential",
+      "best-new-restaurants-los-angeles-heatmap",
+      "best-italian-restaurants-los-angeles",
+      "best-pizza-los-angeles",
+      "best-sushi-los-angeles",
+      "best-ramen-los-angeles",
+      "best-coffee-shops-los-angeles",
+      "best-tacos-los-angeles"
+    ),
+    london = c(
+      "best-french-restaurants-london",
+      "best-puddings-london-restaurants",
+      "best-restaurants-canary-wharf",
+      "best-special-occasion-restaurants-london-splurge-meals",
+      "borough-market-best-restaurants-opening-times",
+      "iconic-dishes-london-best-restaurant-dishes",
+      "best-biryanis-london"
     ),
     cli::cli_abort("No default Eater guides for {.val {city}}")
   )

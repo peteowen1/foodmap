@@ -405,7 +405,7 @@ is_generic_suburb <- function(s) {
   s_norm <- tolower(stringr::str_squish(s))
   city_names <- c(
     "san francisco", "new york", "los angeles", "chicago", "boston",
-    "honolulu",
+    "honolulu", "london",
     "sydney", "melbourne", "brisbane", "adelaide", "perth", "hobart",
     "canberra", "darwin", "gold coast"
   )

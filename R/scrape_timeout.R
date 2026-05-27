@@ -82,14 +82,21 @@ scrape_timeout <- function(city = "sydney", use_cache = FALSE) {
 }
 
 #' Build Time Out URL for a city
+#'
+#' Each city's Time Out edition lives at `timeout.com/<city-slug>/...`
+#' but the article slug itself varies - some are "the-best-restaurants-
+#' in-X", some "best-restaurants-in-X", and the NYC edition shifted to
+#' a numbered "100-best" framing. Lookup table keeps this explicit so
+#' a quiet slug change doesn't silently swap to the wrong article.
 #' @noRd
 timeout_url <- function(city) {
-  # Sydney/Melbourne use "the-best-restaurants-in-{city}"
-  # Brisbane/Adelaide use "best-restaurants-in-{city}"
   urls <- c(
     sydney          = "https://www.timeout.com/sydney/restaurants/the-best-restaurants-in-sydney",
     melbourne       = "https://www.timeout.com/melbourne/restaurants/the-best-restaurants-in-melbourne",
-    `san-francisco` = "https://www.timeout.com/san-francisco/restaurants/the-best-restaurants-in-san-francisco"
+    `san-francisco` = "https://www.timeout.com/san-francisco/restaurants/the-best-restaurants-in-san-francisco",
+    `new-york`      = "https://www.timeout.com/newyork/restaurants/100-best-new-york-restaurants",
+    `los-angeles`   = "https://www.timeout.com/los-angeles/restaurants/best-restaurants-in-los-angeles",
+    london          = "https://www.timeout.com/london/restaurants/best-restaurants-in-london"
   )
   urls[[city]]
 }

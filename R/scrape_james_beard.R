@@ -37,7 +37,9 @@ scrape_james_beard <- function(city = "san-francisco") {
 #' recognition), award (winner / finalist).
 #' @noRd
 jba_records <- function(city) {
-  if (city == "honolulu") return(jba_records_honolulu())
+  if (city == "honolulu")    return(jba_records_honolulu())
+  if (city == "new-york")    return(jba_records_new_york())
+  if (city == "los-angeles") return(jba_records_los_angeles())
   if (city != "san-francisco") {
     cli::cli_abort("No JBA list for {.val {city}}")
   }
@@ -77,6 +79,77 @@ jba_records <- function(city) {
     # geocoder doesn't waste an API call rejecting it.
     "Benu",               "SoMa",          "Outstanding Service",    2017L, "Winner",   "Contemporary American",
     "Acquerello",         "Polk Gulch",    "Outstanding Wine Service",2018L,"Finalist", "Italian"
+  )
+}
+
+
+#' Hand-curated JBA New York City recognition list
+#'
+#' Best Chef: New York State is the regional JBA category for NYC.
+#' America's Classics has named several NYC institutions over the
+#' years. Best New Restaurant and Outstanding Restaurant have both
+#' had heavy NYC representation across recent decades; the list
+#' below is intentionally conservative - winners and recent (2018+)
+#' finalists only.
+#' @noRd
+jba_records_new_york <- function() {
+  tibble::tribble(
+    ~name,                   ~suburb,         ~category,                          ~year, ~award,    ~cuisine,
+    # America's Classics - NYC institutions
+    "Russ & Daughters",      "Lower East Side", "America's Classics",            2003L, "Winner",   "Jewish Deli",
+    "Katz's Delicatessen",   "Lower East Side", "America's Classics",            2024L, "Winner",   "Jewish Deli",
+    "Peter Luger",           "Williamsburg",    "America's Classics",            2002L, "Winner",   "Steakhouse",
+    "Sylvia's",              "Harlem",          "America's Classics",            2008L, "Winner",   "Soul Food",
+    # Outstanding Restaurant (recent winners and finalists)
+    "Eleven Madison Park",   "Flatiron",        "Outstanding Restaurant",        2017L, "Winner",   "Contemporary American",
+    "Le Bernardin",          "Midtown West",    "Outstanding Restaurant",        2015L, "Winner",   "Seafood",
+    "Daniel",                "Upper East Side", "Outstanding Restaurant",        2010L, "Winner",   "French",
+    "Per Se",                "Columbus Circle", "Outstanding Restaurant",        2011L, "Winner",   "Contemporary American",
+    "Gramercy Tavern",       "Flatiron",        "Outstanding Restaurant",        2008L, "Winner",   "Contemporary American",
+    "Atomix",                "Murray Hill",     "Outstanding Restaurant",        2024L, "Finalist", "Korean",
+    "Estela",                "NoLita",          "Outstanding Restaurant",        2019L, "Finalist", "Contemporary American",
+    "Marea",                 "Columbus Circle", "Outstanding Restaurant",        2018L, "Finalist", "Italian",
+    "Cosme",                 "Flatiron",        "Outstanding Restaurant",        2022L, "Finalist", "Mexican",
+    # Best New Restaurant
+    "Cote",                  "Flatiron",        "Best New Restaurant",           2018L, "Finalist", "Korean",
+    "Misi",                  "Williamsburg",    "Best New Restaurant",           2020L, "Finalist", "Italian",
+    "Dirt Candy",            "Lower East Side", "Best New Restaurant",           2016L, "Finalist", "Vegetarian",
+    # Best Chef: New York State (recent)
+    "Llama Inn",             "Williamsburg",    "Best Chef: New York State",     2023L, "Finalist", "Peruvian",
+    "Atoboy",                "NoMad",           "Best Chef: New York State",     2019L, "Finalist", "Korean",
+    "Semma",                 "West Village",    "Best Chef: New York State",     2024L, "Winner",   "Indian",
+    "Tatiana",               "Lincoln Square",  "Best Chef: New York State",     2024L, "Finalist", "Afro-Caribbean"
+  )
+}
+
+
+#' Hand-curated JBA Los Angeles recognition list
+#'
+#' LA shares the Best Chef: California category with SF/Bay Area; the
+#' Outstanding Restaurant and Best New Restaurant categories are
+#' national. List is intentionally conservative - winners and recent
+#' (2018+) finalists only.
+#' @noRd
+jba_records_los_angeles <- function() {
+  tibble::tribble(
+    ~name,                   ~suburb,           ~category,                       ~year, ~award,    ~cuisine,
+    # Outstanding Restaurant
+    "n/naka",                "Palms",           "Outstanding Restaurant",        2024L, "Finalist", "Japanese",
+    "Republique",            "Hancock Park",    "Outstanding Restaurant",        2018L, "Finalist", "French",
+    # Best Chef: California (LA-side winners and finalists)
+    "Bavel",                 "Arts District",   "Best Chef: California",         2022L, "Finalist", "Middle Eastern",
+    "Bestia",                "Arts District",   "Best Chef: California",         2018L, "Finalist", "Italian",
+    "Holbox",                "South LA",        "Best Chef: California",         2024L, "Winner",   "Seafood",
+    "Damian",                "Arts District",   "Best Chef: California",         2023L, "Finalist", "Mexican",
+    "Mh Zh",                 "Silver Lake",     "Best Chef: California",         2022L, "Finalist", "Israeli",
+    "Pijja Palace",          "Silver Lake",     "Best Chef: California",         2024L, "Finalist", "Indian",
+    "Anajak Thai",           "Sherman Oaks",    "Best Chef: California",         2023L, "Winner",   "Thai",
+    # Best New Restaurant
+    "Mes Amis",              "Hancock Park",    "Best New Restaurant",           2024L, "Finalist", "French",
+    "Yangban",               "Arts District",   "Best New Restaurant",           2023L, "Finalist", "Korean",
+    # America's Classics - LA institutions
+    "Philippe the Original", "Chinatown",       "America's Classics",            2024L, "Winner",   "American",
+    "Langer's Delicatessen", "Westlake",        "America's Classics",            2001L, "Winner",   "Jewish Deli"
   )
 }
 

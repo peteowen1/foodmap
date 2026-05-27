@@ -40,8 +40,8 @@ city_country <- function(city) {
   # geocoding picks the right country bias.
   au_cities <- c("sydney", "melbourne", "brisbane", "adelaide", "perth",
                  "hobart", "canberra", "darwin", "gold-coast")
-  us_cities <- c("san-francisco", "honolulu")
-  uk_cities <- character()
+  us_cities <- c("san-francisco", "honolulu", "new-york", "los-angeles")
+  uk_cities <- c("london")
 
   if (city %in% au_cities) return("AU")
   if (city %in% us_cities) return("US")
@@ -120,6 +120,23 @@ city_bbox <- function(city) {
     # 21.25-21.75 N / -158.30 to -157.65 W; we widen slightly to keep
     # the windward / North Shore venues comfortably inside.
     honolulu        = list(lat = c(21.20, 21.78), lng = c(-158.35, -157.60)),
+    # NYC five boroughs + immediate commute (Long Island City, Jersey
+    # City). Wide enough that any of the Michelin Westchester /
+    # Hudson Valley satellites get filtered out (they belong to a
+    # different sub-region), but loose enough to catch Coney Island
+    # to the south and Riverdale / Yonkers to the north.
+    `new-york`      = list(lat = c(40.49, 40.92), lng = c(-74.28, -73.68)),
+    # Los Angeles metro - covers LA proper, Santa Monica, Venice,
+    # Pasadena, Culver City, Beverly Hills, Hollywood, the South Bay,
+    # plus into San Gabriel Valley (Din Tai Fung etc.). Doesn't reach
+    # Long Beach or Orange County by design - those have their own
+    # local guides and dominate any LA scrape if we don't bound.
+    `los-angeles`   = list(lat = c(33.85, 34.30), lng = c(-118.70, -118.10)),
+    # Greater London, M25-ish. Catches Zone 1-6 plus the satellites
+    # the food guides routinely cover (Hampstead, Greenwich, Ealing,
+    # Wimbledon). Tight enough to filter out Brighton / Oxford / Bath
+    # picks that occasionally leak into "best UK restaurants" guides.
+    london          = list(lat = c(51.28, 51.69), lng = c(-0.51, 0.33)),
     NULL
   )
 }

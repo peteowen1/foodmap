@@ -32,7 +32,7 @@ scrape_bonappetit <- function(city = "new-york",
                               extra_guides = character(),
                               use_cache = FALSE) {
   city <- validate_city_source(city, "bonappetit")
-  cli::cli_h1("Scraping Bon Appétit: {city}")
+  cli::cli_h1("Scraping Bon App\u00E9tit: {city}")
 
   guides <- unique(c(bonappetit_default_guides(), extra_guides))
   cli::cli_alert_info("Fetching {length(guides)} guide{?s}")
@@ -52,7 +52,7 @@ scrape_bonappetit <- function(city = "new-york",
   })
   results <- purrr::compact(results)
   if (length(results) == 0) {
-    cli::cli_abort("No data scraped from any Bon Appétit guide.")
+    cli::cli_abort("No data scraped from any Bon App\u00E9tit guide.")
   }
 
   combined <- dplyr::bind_rows(results) |>
@@ -178,7 +178,7 @@ bonappetit_city_labels <- function(city) {
     `san-francisco` = c("San Francisco", "Oakland", "Berkeley"),
     honolulu        = c("Honolulu", "Oahu", "Waikiki"),
     london          = c("London"),
-    cli::cli_abort("No Bon Appétit city labels configured for {.val {city}}")
+    cli::cli_abort("No Bon App\u00E9tit city labels configured for {.val {city}}")
   )
 }
 

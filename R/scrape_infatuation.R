@@ -106,6 +106,43 @@ infatuation_default_guides <- function(city) {
       "best-restaurants-oahu-honolulu-waikiki-hawaii",
       "best-bars-honolulu"
     ),
+    `new-york` = c(
+      "best-restaurants-nyc",
+      "best-new-new-york-restaurants-hit-list",
+      "best-new-brooklyn-restaurants-hit-list",
+      "best-italian-restaurants-nyc",
+      "best-brunch-restaurants-nyc",
+      "best-burger-nyc",
+      "best-cheap-eats-nyc",
+      "best-date-night-restaurants-nyc",
+      "best-fun-cool-bars-nyc-right-now",
+      "best-asian-desserts-nyc",
+      "best-restaurants-flatiron",
+      "best-restaurants-little-italy-nyc"
+    ),
+    `los-angeles` = c(
+      "best-restaurants-los-angeles",
+      "best-new-los-angeles-restaurants-hit-list",
+      "best-chinese-food-los-angeles",
+      "best-sushi-in-los-angeles",
+      "best-mariscos-restaurants-in-la",
+      "best-brunch-la-greatest-hits-list",
+      "best-restaurants-in-santa-monica",
+      "best-la-restaurants-to-eat-at-the-bar",
+      "affordable-romantic-restaurants-los-angeles"
+    ),
+    london = c(
+      "best-restaurants-london",
+      "best-new-london-restaurants-hit-list",
+      "best-bakeries-in-london",
+      "best-cheap-eats-london",
+      "best-fish-and-chips-london",
+      "best-east-london-brunch",
+      "best-outdoor-restaurants-london",
+      "best-pub-gardens-london",
+      "best-drinks-cocktails-london",
+      "best-london-coffee-shops-with-outdoor-seating"
+    ),
     cli::cli_abort("No default Infatuation guides for {.val {city}}")
   )
 }
@@ -120,6 +157,9 @@ infatuation_url_city <- function(city) {
   switch(city,
     `san-francisco` = "san-francisco",
     honolulu        = "oahu",
+    `new-york`      = "new-york",
+    `los-angeles`   = "los-angeles",
+    london          = "london",
     cli::cli_abort("No Infatuation URL mapping for {.val {city}}")
   )
 }
