@@ -233,6 +233,17 @@ deduplicate_restaurants <- function(restaurants) {
       }
     }
 
+    # Special handling: union of cuisine labels across sources. A venue
+    # can legitimately carry multiple cuisines (an Italian-pizza spot
+    # is both "Italian" and "Pizza"; an izakaya is "Japanese, Izakaya").
+    # Each source's `cuisine` value is comma-separated already, so we
+    # split, normalise the case, dedup, and re-join. The export layer
+    # already splits on ", " to power the cuisine filter, so multi-label
+    # venues just light up under more checkboxes.
+    if ("cuisine" %in% names(subset)) {
+      merged_row$cuisine <- union_cuisines(subset$cuisine)
+    }
+
     merged_row
   }) |>
     dplyr::bind_rows()
@@ -458,4 +469,34 @@ canonical_address <- function(addr) {
     stringr::str_replace_all("\\bcircuit\\b", "cct") |>
     stringr::str_replace_all("\\bcourt\\b", "ct") |>
     stringr::str_squish()
+}
+
+
+#' Union of cuisine labels across a vector of comma-separated strings
+#'
+#' Each source's `cuisine` value can already be a comma-separated list
+#' ("Italian, Pizza"), and a venue listed by multiple sources may carry
+#' different labels in each. This helper splits every entry, drops
+#' blanks and case-insensitive duplicates, and re-joins with ", " in
+#' stable first-seen order.
+#'
+#' Stable order matters because the export layer renders cuisine chips
+#' in popups in string order; unstable ordering would churn HTML across
+#' re-runs even when nothing changed.
+#'
+#' Returns `NA_character_` when no usable label is found across all
+#' inputs (so the harmonize / export layers can keep treating cuisine
+#' as a nullable field).
+#' @noRd
+union_cuisines <- function(values) {
+  if (length(values) == 0) return(NA_character_)
+  parts <- unlist(strsplit(values[!is.na(values)], ",\\s*"))
+  parts <- stringr::str_squish(parts)
+  parts <- parts[nzchar(parts)]
+  if (length(parts) == 0) return(NA_character_)
+  # Case-insensitive dedup keeping first occurrence (preserves the
+  # casing convention of whichever source listed it first).
+  key <- tolower(parts)
+  parts <- parts[!duplicated(key)]
+  paste(parts, collapse = ", ")
 }

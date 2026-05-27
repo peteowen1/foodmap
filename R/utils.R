@@ -83,7 +83,7 @@ valid_sources <- function() {
     "good_food_guide", "gfg_awards", "concrete_playground",
     "infatuation", "eater", "7x7", "cn_traveler", "james_beard",
     "michelin", "sprudge", "thrillist", "honolulu_magazine",
-    "hale_aina")
+    "hale_aina", "resy", "bonappetit", "worlds50best")
 }
 
 #' Cities supported by a given source
@@ -109,6 +109,11 @@ supported_cities_for_source <- function(source) {
     thrillist           = "honolulu",
     honolulu_magazine   = "honolulu",
     hale_aina           = "honolulu",
+    resy                = c("new-york", "los-angeles"),
+    bonappetit          = c("new-york", "los-angeles", "san-francisco",
+                            "honolulu"),
+    worlds50best        = c("new-york", "los-angeles", "san-francisco",
+                            "london"),
     cli::cli_abort("Unknown source: {.val {source}}")
   )
 }

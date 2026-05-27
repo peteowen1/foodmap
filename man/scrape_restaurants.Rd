@@ -19,7 +19,8 @@ scrape_restaurants(
 \code{"good_food_guide"}, \code{"gfg_awards"}, \code{"concrete_playground"},
 \code{"infatuation"}, \code{"eater"}, \code{"7x7"}, \code{"cn_traveler"},
 \code{"james_beard"}, \code{"michelin"}, \code{"sprudge"}, \code{"thrillist"},
-\code{"honolulu_magazine"}, \code{"hale_aina"}. Default \code{"broadsheet"}.}
+\code{"honolulu_magazine"}, \code{"hale_aina"}, \code{"resy"}, \code{"bonappetit"},
+\code{"worlds50best"}. Default \code{"broadsheet"}.}
 
 \item{use_chromote}{Logical. Force headless Chrome rendering where applicable.
 Default \code{FALSE}.}

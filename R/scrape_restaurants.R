@@ -9,7 +9,8 @@
 #'   `"good_food_guide"`, `"gfg_awards"`, `"concrete_playground"`,
 #'   `"infatuation"`, `"eater"`, `"7x7"`, `"cn_traveler"`,
 #'   `"james_beard"`, `"michelin"`, `"sprudge"`, `"thrillist"`,
-#'   `"honolulu_magazine"`, `"hale_aina"`. Default `"broadsheet"`.
+#'   `"honolulu_magazine"`, `"hale_aina"`, `"resy"`, `"bonappetit"`,
+#'   `"worlds50best"`. Default `"broadsheet"`.
 #' @param use_chromote Logical. Force headless Chrome rendering where applicable.
 #'   Default `FALSE`.
 #' @param use_cache Logical. If `TRUE`, cache HTTP responses locally to avoid
@@ -49,6 +50,9 @@ scrape_restaurants <- function(city = "sydney",
     thrillist         = scrape_thrillist(city, use_cache = use_cache),
     honolulu_magazine = scrape_honolulu_magazine(city, use_cache = use_cache),
     hale_aina         = scrape_hale_aina(city, use_cache = use_cache),
+    resy              = scrape_resy(city, use_cache = use_cache),
+    bonappetit        = scrape_bonappetit(city, use_cache = use_cache),
+    worlds50best      = scrape_worlds50best(city, use_cache = use_cache),
     cli::cli_abort("Internal: dispatcher missing case for {.val {source}}")
   )
 }

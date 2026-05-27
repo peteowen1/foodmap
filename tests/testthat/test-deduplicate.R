@@ -247,3 +247,65 @@ test_that("single-row inputs get n_sources = 1", {
   result <- deduplicate_restaurants(data)
   expect_equal(result$n_sources, 1L)
 })
+
+
+# --- price + cuisine merge -------------------------------------------------
+
+test_that("price merge uses median across sources, not richest row", {
+  # Three sources, three different prices. Median 3 should win over the
+  # "richest" row's price (whichever happens to have the most non-NA cols).
+  data <- dplyr::bind_rows(
+    base_row("Quay", "Sydney", "broadsheet", price_range = 2L),
+    base_row("Quay", "Sydney", "timeout",    price_range = 3L,
+             description = "long description that makes this row 'richest'"),
+    base_row("Quay", "Sydney", "agfg",       price_range = 4L)
+  )
+  result <- deduplicate_restaurants(data)
+  expect_equal(nrow(result), 1)
+  expect_equal(result$price_range, 3L)
+})
+
+test_that("price merge ignores NA and clips to 1-4", {
+  data <- dplyr::bind_rows(
+    base_row("Quay", "Sydney", "broadsheet", price_range = NA_integer_),
+    base_row("Quay", "Sydney", "timeout",    price_range = 5L),  # AU 1-5 scale
+    base_row("Quay", "Sydney", "agfg",       price_range = 3L)
+  )
+  result <- deduplicate_restaurants(data)
+  expect_equal(nrow(result), 1)
+  # NA dropped, 5 clipped to 4 → median(c(4, 3)) = 3.5 → round half-to-even = 4
+  expect_equal(result$price_range, 4L)
+})
+
+test_that("cuisine merge unions across sources case-insensitively", {
+  data <- dplyr::bind_rows(
+    base_row("Lucia", "Sydney", "broadsheet"),
+    base_row("Lucia", "Sydney", "timeout"),
+    base_row("Lucia", "Sydney", "agfg")
+  )
+  data$cuisine <- c("Italian, Pizza", "italian", "Pizza, Pasta")
+  result <- deduplicate_restaurants(data)
+  expect_equal(nrow(result), 1)
+  # First-seen casing preserved, dedup by lower-case, stable order
+  expect_equal(result$cuisine, "Italian, Pizza, Pasta")
+})
+
+test_that("cuisine merge returns NA when all sources are NA or blank", {
+  data <- dplyr::bind_rows(
+    base_row("Lucia", "Sydney", "broadsheet"),
+    base_row("Lucia", "Sydney", "timeout")
+  )
+  data$cuisine <- c(NA_character_, "")
+  result <- deduplicate_restaurants(data)
+  expect_true(is.na(result$cuisine))
+})
+
+test_that("union_cuisines helper handles edge cases", {
+  expect_true(is.na(union_cuisines(character())))
+  expect_true(is.na(union_cuisines(NA_character_)))
+  expect_true(is.na(union_cuisines(c(NA_character_, ""))))
+  expect_equal(union_cuisines("Italian"), "Italian")
+  expect_equal(union_cuisines(c("Italian", "Italian")), "Italian")
+  # Whitespace stripping
+  expect_equal(union_cuisines("Italian,  Pizza"), "Italian, Pizza")
+})
