@@ -142,6 +142,50 @@ city_bbox <- function(city) {
 }
 
 
+#' Look up the state / region label for a city
+#'
+#' Used to enrich geocode queries when the venue has no street address -
+#' "Billinudgel Hotel Billinudgel NSW Australia" disambiguates a small-
+#' town venue far better than "Billinudgel Hotel Billinudgel Australia"
+#' alone. For venues with a full address (street + postcode) the state
+#' is already implicit in the postcode, so we skip the extra noise.
+#'
+#' AU uses the standard postal abbreviations because that's how AGFG
+#' and the SMH listicles spell them; US/GB use full names because the
+#' abbreviation conventions there are less uniform across guides.
+#'
+#' @param city Character. Lowercase city slug, or `NULL`.
+#' @return Character state/region label, or `NA_character_` for unknown.
+#' @noRd
+city_state <- function(city) {
+  if (is.null(city) || is.na(city)) return(NA_character_)
+  city <- tolower(city)
+  city <- switch(city,
+    sf  = "san-francisco",
+    nyc = "new-york",
+    la  = "los-angeles",
+    city
+  )
+  switch(city,
+    sydney          = "NSW",
+    melbourne       = "VIC",
+    brisbane        = "QLD",
+    adelaide        = "SA",
+    perth           = "WA",
+    hobart          = "TAS",
+    canberra        = "ACT",
+    darwin          = "NT",
+    `gold-coast`    = "QLD",
+    `san-francisco` = "California",
+    `new-york`      = "New York",
+    `los-angeles`   = "California",
+    honolulu        = "Hawaii",
+    london          = "England",
+    NA_character_
+  )
+}
+
+
 #' Region code passed to Google Places API for ranking bias
 #'
 #' Maps our two-letter ISO codes to the CLDR region codes the Places API

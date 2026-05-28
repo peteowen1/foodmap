@@ -13,25 +13,32 @@ if (Sys.getenv("RSTUDIO_PANDOC") == "" && !nzchar(Sys.which("pandoc"))) {
 }
 
 cities <- list(
-  list(csv = "output/sydney_all_sources.csv",
+  list(city = "sydney",
+       csv = "output/sydney_all_sources.csv",
        html = "docs/sydney.html",
        title = "foodmap - Sydney's hatted restaurants"),
-  list(csv = "output/melbourne_all_sources.csv",
+  list(city = "melbourne",
+       csv = "output/melbourne_all_sources.csv",
        html = "docs/melbourne.html",
        title = "foodmap - Melbourne's best restaurants"),
-  list(csv = "output/san_francisco_all_sources.csv",
+  list(city = "san-francisco",
+       csv = "output/san_francisco_all_sources.csv",
        html = "docs/san_francisco.html",
        title = "foodmap - San Francisco"),
-  list(csv = "output/honolulu_all_sources.csv",
+  list(city = "honolulu",
+       csv = "output/honolulu_all_sources.csv",
        html = "docs/honolulu.html",
        title = "foodmap - Honolulu"),
-  list(csv = "output/new_york_all_sources.csv",
+  list(city = "new-york",
+       csv = "output/new_york_all_sources.csv",
        html = "docs/new_york.html",
        title = "foodmap - New York"),
-  list(csv = "output/los_angeles_all_sources.csv",
+  list(city = "los-angeles",
+       csv = "output/los_angeles_all_sources.csv",
        html = "docs/los_angeles.html",
        title = "foodmap - Los Angeles"),
-  list(csv = "output/london_all_sources.csv",
+  list(city = "london",
+       csv = "output/london_all_sources.csv",
        html = "docs/london.html",
        title = "foodmap - London")
 )
@@ -50,5 +57,5 @@ for (city in cities) {
   for (col in intersect(text_cols, names(all))) {
     all[[col]] <- as.character(all[[col]])
   }
-  export_html(all, city$html, title = city$title)
+  export_html(all, city$html, title = city$title, city = city$city)
 }

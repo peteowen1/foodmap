@@ -4,13 +4,21 @@
 \alias{export_kml}
 \title{Export restaurants to KML for Google My Maps}
 \usage{
-export_kml(restaurants, output_path = "hotlist.kml")
+export_kml(restaurants, output_path = "hotlist.kml", city = NULL)
 }
 \arguments{
 \item{restaurants}{A tibble as returned by \code{\link[=geocode_restaurants]{geocode_restaurants()}}.}
 
 \item{output_path}{Character. File path for the KML output.
 Defaults to \code{"{city}_hotlist.kml"} in the current directory.}
+
+\item{city}{Character or \code{NULL}. Optional city slug (e.g.
+\code{"sydney"}). When supplied and the city has a registered bbox in
+\code{city_bbox()}, venues whose coordinates fall outside that box are
+excluded from the KML. Lets the geocoder's country-only fallback
+populate coords for regional venues (so the CSV stays complete)
+while keeping the city map focused on its metro area. Default
+\code{NULL} (no spatial filter).}
 }
 \value{
 The output path (invisibly).

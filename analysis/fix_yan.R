@@ -27,9 +27,10 @@ all <- all |> geocode_restaurants() |> harmonize_sources()
 
 dir.create("output", showWarnings = FALSE)
 export_csv(all, "output/sydney_all_sources.csv")
-export_kml(all, "output/sydney_all_sources.kml")
+export_kml(all, "output/sydney_all_sources.kml", city = "sydney")
 export_html(all, "docs/sydney.html",
-            title = "foodmap - Sydney's hatted restaurants")
+            title = "foodmap - Sydney's hatted restaurants",
+            city = "sydney")
 
 cat("\nNew coords for the previously-NA-suburb venues:\n")
 print(all[all$name %in% bad_names,

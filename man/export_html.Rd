@@ -4,7 +4,12 @@
 \alias{export_html}
 \title{Export restaurants to an interactive Leaflet HTML map}
 \usage{
-export_html(restaurants, output_path = "map.html", title = "Restaurant Map")
+export_html(
+  restaurants,
+  output_path = "map.html",
+  title = "Restaurant Map",
+  city = NULL
+)
 }
 \arguments{
 \item{restaurants}{A tibble as returned by \code{\link[=geocode_restaurants]{geocode_restaurants()}},
@@ -16,6 +21,14 @@ computed automatically when a \code{source} column is present.}
 
 \item{title}{Character. Browser tab title for the map. Default
 \code{"Restaurant Map"}.}
+
+\item{city}{Character or \code{NULL}. Optional city slug (e.g.
+\code{"sydney"}). When supplied and the city has a registered bbox in
+\code{city_bbox()}, venues whose coordinates fall outside that box are
+excluded from the map. Lets the geocoder's country-only fallback
+populate coords for regional venues (so the CSV stays complete)
+while keeping the city map focused on its metro area. Default
+\code{NULL} (no spatial filter).}
 }
 \value{
 The output path (invisibly).

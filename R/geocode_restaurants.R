@@ -94,7 +94,8 @@ geocode_restaurants <- function(restaurants,
 
   for (i in idx) {
     row <- restaurants[i, ]
-    query <- build_geocode_query(row$name, row$suburb, row$address, country)
+    query <- build_geocode_query(row$name, row$suburb, row$address,
+                                 country, city = city)
 
     result <- places_text_search(query, api_key, country = country, city = city)
 
@@ -170,23 +171,21 @@ geocode_cache_apply <- function(restaurants, cache_path, country = NULL,
   )
 
   # Self-heal: any cached coords that fall outside the target country's
-  # bounding box (or, when city is provided, the tighter city bbox)
-  # get cleared so they'll be re-geocoded with the right regional bias.
-  # Skipped when both bias sources are unavailable.
-  has_city_bbox <- !is.null(city_bbox(city))
-  invalid <- if (has_city_bbox) {
-    !is.na(restaurants$latitude) &
-      !is_in_city(restaurants$latitude, restaurants$longitude, city)
-  } else if (!is.null(country) && !is.na(country)) {
+  # bounding box get cleared so they'll be re-geocoded. We deliberately
+  # do NOT enforce the tighter city bbox here - cached venues that
+  # geocoded via the country-only fallback (e.g. regional NSW places
+  # listed in the SMH "Sydney" Good Food Guide) would otherwise be
+  # wiped on every subsequent run, burning API spend. The downstream
+  # map exporters apply the city bbox at display time instead.
+  invalid <- if (!is.null(country) && !is.na(country)) {
     !is.na(restaurants$latitude) &
       !is_in_country(restaurants$latitude, restaurants$longitude, country)
   } else {
     rep(FALSE, nrow(restaurants))
   }
   if (any(invalid)) {
-    region_label <- if (has_city_bbox) city else country
     cli::cli_warn(
-      "{sum(invalid)} cached coord{?s} fell outside {region_label} and will be re-geocoded"
+      "{sum(invalid)} cached coord{?s} fell outside {country} and will be re-geocoded"
     )
     restaurants$latitude[invalid] <- NA_real_
     restaurants$longitude[invalid] <- NA_real_
@@ -274,6 +273,13 @@ ensure_geocode_cols <- function(df) {
 #' contradict suburb because guides routinely disagree on which suburb
 #' a boundary venue belongs to.
 #'
+#' When no address is available we additionally append the city's state
+#' (NSW / VIC / California / ...) because suburb names alone aren't
+#' always globally unique - "Brunswick Heads" is meaningful in NSW but
+#' Google can latch onto a Brunswick suburb elsewhere without the
+#' state hint. Skipped when an address is present because the postcode
+#' already disambiguates.
+#'
 #' The country *name* is appended to the query text (in addition to the
 #' API-side `regionCode`/bbox bias) because Places gives noticeable
 #' weight to the textual signal. Without it, an SF venue's query like
@@ -281,8 +287,12 @@ ensure_geocode_cols <- function(df) {
 #' venue, even with a US bbox set, because the text doesn't disambiguate.
 #' @noRd
 build_geocode_query <- function(name, suburb, address = NA_character_,
-                                country = "AU") {
-  parts <- c(name, address, suburb, country_query_label(country))
+                                country = "AU", city = NULL) {
+  parts <- c(name, address, suburb)
+  if (is.na(address) || !nzchar(address)) {
+    parts <- c(parts, city_state(city))
+  }
+  parts <- c(parts, country_query_label(country))
   parts <- parts[!is.na(parts) & nchar(parts) > 0]
   paste(parts, collapse = " ")
 }
@@ -302,13 +312,38 @@ country_query_label <- function(country) {
 #' Call Google Places API (New) Text Search
 #'
 #' Biases results to the requested country (regionCode + locationBias
-#' rectangle covering the country's bbox). When `country` is `NULL`,
-#' falls back to a globally-unbiased query. After the API responds,
-#' walks the returned places and rejects anything outside the country's
-#' bbox so a strongly-matched foreign place can't slip through the
-#' soft `regionCode` bias.
+#' rectangle covering the country's bbox), and when `city` is supplied
+#' tightens that bias to the city's drive-time bbox so same-name venues
+#' in other cities can't outrank the local one.
+#'
+#' When a city-constrained search returns nothing usable, this falls
+#' back to a country-only attempt. The fallback exists for venues that
+#' are legitimately listed in a city's food guide but sit outside the
+#' city's metro bbox - e.g. Byron Bay restaurants in SMH's "Sydney"
+#' Good Food Guide. The downstream consumer (KML/HTML map exporters)
+#' is responsible for filtering these back out of city-scoped maps.
 #' @noRd
 places_text_search <- function(query, api_key, country = "AU", city = NULL) {
+  result <- places_search_attempt(query, api_key, country, city)
+  if (!is.null(result)) return(result)
+
+  # Retry without the city bbox if there was one to drop. Without this
+  # guard the fallback would just repeat the original (country-only)
+  # call and waste an API request.
+  if (!is.null(city) && !is.null(city_bbox(city))) {
+    result <- places_search_attempt(query, api_key, country, city = NULL)
+    if (!is.null(result)) return(result)
+  }
+
+  region_label <- city %||% country %||% "matching"
+  cli::cli_warn("No {region_label} results for {.val {query}}")
+  NULL
+}
+
+#' One attempt at a Places Text Search. Returns a result list or NULL.
+#' No CLI warnings on miss - the wrapper decides whether to retry.
+#' @noRd
+places_search_attempt <- function(query, api_key, country, city) {
 
   body <- list(textQuery = query)
   rcode <- country_region_code(country)
@@ -351,10 +386,7 @@ places_text_search <- function(query, api_key, country = "AU", city = NULL) {
   data <- httr2::resp_body_json(resp)
   places <- data$places
 
-  if (length(places) == 0) {
-    cli::cli_warn("No results for {.val {query}}")
-    return(NULL)
-  }
+  if (length(places) == 0) return(NULL)
 
   # Reject any results outside the target bbox (region bias is a
   # preference, not a hard restriction). City bbox wins over country
@@ -377,8 +409,6 @@ places_text_search <- function(query, api_key, country = "AU", city = NULL) {
     }
   }
 
-  region_label <- city %||% country %||% "matching"
-  cli::cli_warn("No {region_label} results for {.val {query}}")
   NULL
 }
 

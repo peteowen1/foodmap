@@ -90,10 +90,18 @@ add_placemark <- function(parent, row) {
 #' @param restaurants A tibble as returned by [geocode_restaurants()].
 #' @param output_path Character. File path for the KML output.
 #'   Defaults to `"{city}_hotlist.kml"` in the current directory.
+#' @param city Character or `NULL`. Optional city slug (e.g.
+#'   `"sydney"`). When supplied and the city has a registered bbox in
+#'   `city_bbox()`, venues whose coordinates fall outside that box are
+#'   excluded from the KML. Lets the geocoder's country-only fallback
+#'   populate coords for regional venues (so the CSV stays complete)
+#'   while keeping the city map focused on its metro area. Default
+#'   `NULL` (no spatial filter).
 #'
 #' @return The output path (invisibly).
 #' @export
-export_kml <- function(restaurants, output_path = "hotlist.kml") {
+export_kml <- function(restaurants, output_path = "hotlist.kml",
+                       city = NULL) {
 
   has_coords <- !is.na(restaurants$latitude) & !is.na(restaurants$longitude)
   n_skip <- sum(!has_coords)
@@ -103,6 +111,19 @@ export_kml <- function(restaurants, output_path = "hotlist.kml") {
     cli::cli_warn(
       "Excluding {n_skip} venue{?s} without coordinates from KML"
     )
+  }
+
+  # Drop venues outside the city's metro bbox when one is registered.
+  # Mirrors export_html() so the KML and HTML maps stay in sync.
+  if (!is.null(city) && !is.null(city_bbox(city))) {
+    in_metro <- is_in_city(geo$latitude, geo$longitude, city)
+    n_out <- sum(!in_metro)
+    if (n_out > 0) {
+      cli::cli_warn(
+        "Excluding {n_out} venue{?s} outside the {city} metro bbox from KML"
+      )
+      geo <- geo[in_metro, , drop = FALSE]
+    }
   }
 
   if (nrow(geo) == 0) {

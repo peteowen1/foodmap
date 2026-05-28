@@ -28,9 +28,10 @@ all <- all |>
 
 dir.create("output", showWarnings = FALSE)
 export_csv(all, "output/sydney_all_sources.csv")
-export_kml(all, "output/sydney_all_sources.kml")
+export_kml(all, "output/sydney_all_sources.kml", city = "sydney")
 export_html(all, "docs/sydney.html",
-            title = "foodmap - Sydney's hatted restaurants")
+            title = "foodmap - Sydney's hatted restaurants",
+            city = "sydney")
 
 # 3. Sanity check
 se <- all[all$name == "South End", c("name", "suburb", "address",

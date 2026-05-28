@@ -61,7 +61,7 @@ create_food_map <- function(city = "sydney",
   kml_path <- file.path(output_dir, glue::glue("{file_label}.kml"))
   csv_path <- file.path(output_dir, glue::glue("{file_label}.csv"))
 
-  export_kml(restaurants, kml_path)
+  export_kml(restaurants, kml_path, city = city)
   export_csv(restaurants, csv_path)
 
   cli::cli_h2("Done!")

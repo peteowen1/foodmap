@@ -94,6 +94,71 @@ test_that("export_kml excludes rows without coordinates", {
   expect_length(placemarks, 1)
 })
 
+test_that("export_kml excludes venues outside the city bbox when city is set", {
+  # Sydney bbox covers roughly -36.6..-31.0 lat, 148.5..153.2 lng.
+  # Byron Bay (-28.6, 153.6) is north of the lat range; the regional
+  # fallback may resolve real coords for it but it shouldn't render on
+  # the Sydney map.
+  tbl <- tibble::tibble(
+    name = c("Sydney CBD", "Byron Bay Regional"),
+    suburb = c("Sydney", "Byron Bay"),
+    address = c("1 George St", "Main St"),
+    cuisine = c("Italian", "Modern"),
+    category = c("Restaurant", "Restaurant"),
+    description = c("A", "B"),
+    price_range = c(2L, 3L),
+    rating = c(NA_real_, NA_real_),
+    rating_scale = c(NA_character_, NA_character_),
+    latitude = c(-33.8688, -28.6474),
+    longitude = c(151.2093, 153.6020),
+    url = c(NA_character_, NA_character_)
+  )
+
+  path <- tempfile(fileext = ".kml")
+  on.exit(unlink(path))
+
+  expect_warning(
+    export_kml(tbl, path, city = "sydney"),
+    "Excluding 1 venue.*sydney"
+  )
+
+  doc <- xml2::read_xml(path)
+  ns <- xml2::xml_ns(doc)
+  placemarks <- xml2::xml_find_all(doc, ".//d1:Placemark", ns)
+  expect_length(placemarks, 1)
+  kept_name <- xml2::xml_text(xml2::xml_find_first(placemarks[[1]],
+                                                  ".//d1:name", ns))
+  expect_equal(kept_name, "Sydney CBD")
+})
+
+test_that("export_kml does not filter when city is NULL (default)", {
+  # Same data as the city-filter test; both rows should survive without
+  # a city argument. Guards against the filter accidentally firing on
+  # callers (create_food_map's single-source flow) that never set city.
+  tbl <- tibble::tibble(
+    name = c("Sydney CBD", "Byron Bay Regional"),
+    suburb = c("Sydney", "Byron Bay"),
+    address = c("1 George St", "Main St"),
+    cuisine = c("Italian", "Modern"),
+    category = c("Restaurant", "Restaurant"),
+    description = c("A", "B"),
+    price_range = c(2L, 3L),
+    rating = c(NA_real_, NA_real_),
+    rating_scale = c(NA_character_, NA_character_),
+    latitude = c(-33.8688, -28.6474),
+    longitude = c(151.2093, 153.6020),
+    url = c(NA_character_, NA_character_)
+  )
+  path <- tempfile(fileext = ".kml")
+  on.exit(unlink(path))
+
+  export_kml(tbl, path)  # no city arg
+  doc <- xml2::read_xml(path)
+  ns <- xml2::xml_ns(doc)
+  placemarks <- xml2::xml_find_all(doc, ".//d1:Placemark", ns)
+  expect_length(placemarks, 2)
+})
+
 test_that("export_kml aborts when no venues have coordinates", {
   tbl <- tibble::tibble(
     name = "No Coords",

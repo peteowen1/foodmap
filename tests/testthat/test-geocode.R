@@ -34,6 +34,34 @@ test_that("build_geocode_query drops country label when unknown", {
   )
 })
 
+test_that("build_geocode_query appends state when address is missing and city supplied", {
+  # No address means the postcode can't disambiguate small towns, so we
+  # add the state label as a hint.
+  expect_equal(
+    build_geocode_query("Norma", "Albury", country = "AU", city = "sydney"),
+    "Norma Albury NSW Australia"
+  )
+})
+
+test_that("build_geocode_query omits state when address is present", {
+  # Postcode in the address makes the state hint redundant.
+  expect_equal(
+    build_geocode_query("Pipit", "Pottsville",
+                        address = "4/8 Coronation Avenue, Pottsville, 2489",
+                        country = "AU", city = "sydney"),
+    "Pipit 4/8 Coronation Avenue, Pottsville, 2489 Pottsville Australia"
+  )
+})
+
+test_that("build_geocode_query omits state when city has no registered state", {
+  # city_state() returns NA for unknown cities; the query falls back
+  # to the pre-state behaviour cleanly.
+  expect_equal(
+    build_geocode_query("Foo", "Bar", country = "AU", city = "unknown-city"),
+    "Foo Bar Australia"
+  )
+})
+
 test_that("ensure_geocode_cols adds missing columns", {
   df <- tibble::tibble(name = "test", latitude = 1.0)
   result <- ensure_geocode_cols(df)

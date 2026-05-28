@@ -24,12 +24,20 @@
 #' @param output_path Character. Output HTML path. Default `"map.html"`.
 #' @param title Character. Browser tab title for the map. Default
 #'   `"Restaurant Map"`.
+#' @param city Character or `NULL`. Optional city slug (e.g.
+#'   `"sydney"`). When supplied and the city has a registered bbox in
+#'   `city_bbox()`, venues whose coordinates fall outside that box are
+#'   excluded from the map. Lets the geocoder's country-only fallback
+#'   populate coords for regional venues (so the CSV stays complete)
+#'   while keeping the city map focused on its metro area. Default
+#'   `NULL` (no spatial filter).
 #'
 #' @return The output path (invisibly).
 #' @export
 export_html <- function(restaurants,
                         output_path = "map.html",
-                        title = "Restaurant Map") {
+                        title = "Restaurant Map",
+                        city = NULL) {
   rlang::check_installed("leaflet", reason = "for HTML map output")
   rlang::check_installed("htmlwidgets", reason = "for HTML map output")
   rlang::check_installed("htmltools", reason = "for HTML map output")
@@ -42,6 +50,22 @@ export_html <- function(restaurants,
   if (n_skip > 0) {
     cli::cli_warn("Excluding {n_skip} venue{?s} without coordinates from HTML map")
   }
+
+  # Drop venues outside the city's metro bbox when one is registered.
+  # Coords were already validated to be in-country by the geocoder, so
+  # any rows we drop here are deliberate "wrong region" picks - regional
+  # venues that resolved via the country-only fallback.
+  if (!is.null(city) && !is.null(city_bbox(city))) {
+    in_metro <- is_in_city(geo$latitude, geo$longitude, city)
+    n_out <- sum(!in_metro)
+    if (n_out > 0) {
+      cli::cli_warn(
+        "Excluding {n_out} venue{?s} outside the {city} metro bbox from HTML map"
+      )
+      geo <- geo[in_metro, , drop = FALSE]
+    }
+  }
+
   if (nrow(geo) == 0) {
     cli::cli_abort("No venues with coordinates to export.")
   }
