@@ -65,7 +65,11 @@ country_bbox <- function(country) {
   if (is.null(country) || is.na(country)) return(NULL)
   switch(country,
     AU = list(lat = c(-44, -10), lng = c(112, 154)),
-    US = list(lat = c(24, 49),   lng = c(-125, -66)),  # continental
+    # Continental US (24-49 N, -125 to -66 W) plus Hawaii (~18-22 N,
+    # -160 to -154 W). Widening lat down to 18 and lng west to -161
+    # captures both without bringing in foreign territory. Alaska
+    # would push lat to ~72 - hold off until we add an AK city.
+    US = list(lat = c(18, 49),   lng = c(-161, -66)),
     GB = list(lat = c(49, 61),   lng = c(-9, 2)),
     NULL
   )

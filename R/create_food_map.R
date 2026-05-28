@@ -53,8 +53,12 @@ create_food_map <- function(city = "sydney",
 
   restaurants$source <- source
 
-  # 2. Geocode (only rows missing coordinates)
-  restaurants <- geocode_restaurants(restaurants, api_key = api_key)
+  # 2. Geocode (only rows missing coordinates). Pass city through so
+  # the geocoder can infer country and apply the right bbox checks -
+  # without this, US/UK pipelines would silently fail the AU-default
+  # country self-heal.
+  restaurants <- geocode_restaurants(restaurants, api_key = api_key,
+                                     city = city)
 
   # 3. Export
   file_label <- glue::glue("{city}_{source}")

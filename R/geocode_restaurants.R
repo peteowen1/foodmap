@@ -18,10 +18,11 @@
 #'   you suspect cached coordinates are stale. Default `FALSE`.
 #' @param country Two-letter ISO country code used to bias Places API
 #'   results (`regionCode` + bounding box `locationBias`). Returned
-#'   coordinates outside the country's bounding box are rejected. Set
-#'   `NULL` for an unbiased global query. Default `"AU"` for back-compat
-#'   with the original Sydney/Melbourne pipelines; pass `"US"`, `"GB"`,
-#'   etc. for other regions.
+#'   coordinates outside the country's bounding box are rejected. If
+#'   left at the default (`NULL`) and `city` is supplied, the country
+#'   is inferred from `city_country(city)` - this is almost always what
+#'   you want. Falls back to `"AU"` when neither is set, for back-compat
+#'   with the original Sydney/Melbourne-only pipelines.
 #' @param city Character or `NULL`. Optional city slug (e.g.
 #'   `"san-francisco"`). When the city has a registered tight bbox in
 #'   `city_bbox()`, that's used both as the API `locationBias` and as
@@ -43,9 +44,17 @@ geocode_restaurants <- function(restaurants,
                                 api_key = NULL,
                                 cache_path = "cache/geocodes.csv",
                                 force_refresh = FALSE,
-                                country = "AU",
+                                country = NULL,
                                 city = NULL,
                                 migrate_neighborhoods = FALSE) {
+
+  # Default country: infer from city when possible, else "AU" for
+  # back-compat with the original Sydney/Melbourne pipelines. Without
+  # this inference, geocode_restaurants(rows, city = "los-angeles")
+  # would validate LA coords against the AU bbox and silently wipe them.
+  if (is.null(country)) {
+    country <- if (!is.null(city)) city_country(city) %||% "AU" else "AU"
+  }
 
   restaurants <- ensure_geocode_cols(restaurants)
 

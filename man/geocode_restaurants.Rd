@@ -9,7 +9,7 @@ geocode_restaurants(
   api_key = NULL,
   cache_path = "cache/geocodes.csv",
   force_refresh = FALSE,
-  country = "AU",
+  country = NULL,
   city = NULL,
   migrate_neighborhoods = FALSE
 )
@@ -33,10 +33,11 @@ you suspect cached coordinates are stale. Default \code{FALSE}.}
 
 \item{country}{Two-letter ISO country code used to bias Places API
 results (\code{regionCode} + bounding box \code{locationBias}). Returned
-coordinates outside the country's bounding box are rejected. Set
-\code{NULL} for an unbiased global query. Default \code{"AU"} for back-compat
-with the original Sydney/Melbourne pipelines; pass \code{"US"}, \code{"GB"},
-etc. for other regions.}
+coordinates outside the country's bounding box are rejected. If
+left at the default (\code{NULL}) and \code{city} is supplied, the country
+is inferred from \code{city_country(city)} - this is almost always what
+you want. Falls back to \code{"AU"} when neither is set, for back-compat
+with the original Sydney/Melbourne-only pipelines.}
 
 \item{city}{Character or \code{NULL}. Optional city slug (e.g.
 \code{"san-francisco"}). When the city has a registered tight bbox in

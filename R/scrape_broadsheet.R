@@ -274,8 +274,13 @@ venues_to_tibble <- function(venues, city) {
       price_range  = as.integer(v$pricerange %||% NA_integer_),
       rating       = NA_real_,
       rating_scale = NA_character_,
-      latitude     = as.numeric(addr$latitude %||% NA_real_),
-      longitude    = as.numeric(addr$longitude %||% NA_real_),
+      # Deliberately dropped: Broadsheet's API returns lat/lng but they
+      # are routinely wrong (e.g. "South End" in Erskineville resolved
+      # ~1km off, to the other end of King Street). We hand off to
+      # geocode_restaurants() which builds an address-keyed query and
+      # gets a reliable result. The cache absorbs the one-off API cost.
+      latitude     = NA_real_,
+      longitude    = NA_real_,
       url          = v$url %||% NA_character_
     )
   }) |>

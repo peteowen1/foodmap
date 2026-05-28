@@ -62,6 +62,68 @@ test_that("build_geocode_query omits state when city has no registered state", {
   )
 })
 
+test_that("geocode_restaurants infers country from city when country=NULL", {
+  # This is the footgun guard: pass city = "los-angeles" without
+  # country, and the self-heal must validate against the US bbox, not
+  # the AU default. We don't hit the API here - the cache-apply step
+  # with a single in-LA row should leave coords intact when country
+  # resolves to "US", and would wipe them under the old AU default.
+  skip_if_not_installed("withr")
+  cache_dir <- withr::local_tempdir()
+  cache_path <- file.path(cache_dir, "cache.csv")
+  utils::write.csv(
+    data.frame(
+      name = "Kusano", suburb = "Culver City",
+      latitude = 34.0021592, longitude = -118.3925679,
+      formatted_address = "10726 Jefferson Blvd, Culver City, CA 90230",
+      place_id = "ChIJtest", neighborhood = "Blanco - Culver Crest",
+      stringsAsFactors = FALSE
+    ),
+    cache_path, row.names = FALSE
+  )
+
+  restaurants <- tibble::tibble(
+    name = "Kusano", suburb = "Culver City",
+    address = NA_character_,
+    latitude = NA_real_, longitude = NA_real_
+  )
+
+  # Without country: should infer "US" from city and KEEP the coords.
+  result <- suppressMessages(geocode_restaurants(
+    restaurants, cache_path = cache_path, city = "los-angeles"
+  ))
+  expect_equal(result$latitude, 34.0021592)
+  expect_equal(result$longitude, -118.3925679)
+})
+
+test_that("geocode_restaurants leaves country=AU as the no-city default", {
+  # When no city is passed (the original AU-only pipeline shape), the
+  # implicit default stays "AU" so existing callers don't regress.
+  skip_if_not_installed("withr")
+  cache_dir <- withr::local_tempdir()
+  cache_path <- file.path(cache_dir, "cache.csv")
+  utils::write.csv(
+    data.frame(
+      name = "Aria", suburb = "Sydney",
+      latitude = -33.86, longitude = 151.21,
+      formatted_address = "1 Macquarie St", place_id = "x",
+      neighborhood = "Test Neighborhood",
+      stringsAsFactors = FALSE
+    ),
+    cache_path, row.names = FALSE
+  )
+  restaurants <- tibble::tibble(
+    name = "Aria", suburb = "Sydney",
+    address = NA_character_,
+    latitude = NA_real_, longitude = NA_real_
+  )
+  # No city, no country: AU bbox should accept the Sydney coords.
+  result <- suppressMessages(geocode_restaurants(
+    restaurants, cache_path = cache_path
+  ))
+  expect_equal(result$latitude, -33.86)
+})
+
 test_that("ensure_geocode_cols adds missing columns", {
   df <- tibble::tibble(name = "test", latitude = 1.0)
   result <- ensure_geocode_cols(df)
