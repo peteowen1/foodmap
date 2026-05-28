@@ -1,6 +1,7 @@
 debug/
 output/
 *.csv
+!inst/extdata/*.csv
 *.kml
 .claude/
 cache/

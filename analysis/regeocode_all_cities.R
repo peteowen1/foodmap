@@ -62,6 +62,10 @@ for (city in cities) {
     all[[col]] <- as.character(all[[col]])
   }
 
+  # Drop manually-excluded venues (closed, renamed, cache-polluted)
+  # before geocode so we don't pay API for rows that won't ship.
+  all <- apply_manual_excludes(all, city = city$city)
+
   before_missing <- sum(is.na(all$latitude) | is.na(all$longitude))
   all <- geocode_restaurants(all, city = city$city)
   after_missing <- sum(is.na(all$latitude) | is.na(all$longitude))

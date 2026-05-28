@@ -110,6 +110,13 @@ timeout_parse_card <- function(card, city) {
     rvest::html_text2() |>
     stringr::str_remove("^\\s*\\d+\\.\\s*")
 
+  # Skip cards with no parseable name. Time Out's listing pages
+  # occasionally include cards without an h3 (sponsor tiles, embedded
+  # editorial blocks, etc.); the address-from-summary regex below
+  # would still extract something from those, producing rows with
+  # name = NA and an unrelated address like "Armidale NSW 2350".
+  if (is.na(name) || !nzchar(name)) return(NULL)
+
   # URL from tile link
   href <- rvest::html_element(card, "a[data-testid='tile-link_testID']") |>
     rvest::html_attr("href")

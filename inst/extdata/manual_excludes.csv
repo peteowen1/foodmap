@@ -1,0 +1,7 @@
+city,name,suburb,source,reason,date_added
+san-francisco,Gozu,,,"Renamed to The Wild in 2025; same Embarcadero address (201 Spear St), same owner (Marc Zimmerman). Google Places no longer resolves 'Gozu' here.",2026-05-28
+honolulu,Av Restaurant,,thrillist,"Cache pollution: cache (name, NA suburb) collision with Australian venue at 1594 Snow Rd Milawa VIC 3678. Country pre-filter in cache_apply now prevents recurrence, but the polluted CSV row remains until next scrape.",2026-05-28
+honolulu,Mandalay Restaurant,,thrillist,"Cache pollution: cache (name, NA suburb) collision with Australian venue at 486 Mandalay Cct Beveridge VIC 3753.",2026-05-28
+honolulu,Cino,,,"Cache pollution: cache (name, NA suburb) collision with Australian venue at 152 McKinnon Rd VIC 3204. The Honolulu venue is real (Kalihi-born chef per editorial) but the row is corrupted - re-scrape Honolulu to repopulate cleanly.",2026-05-28
+honolulu,Noi Thai Cuisine,,hale_aina,"Cache pollution: cache collision with Sydney venue at 12/80 John St Pyrmont NSW.",2026-05-28
+honolulu,Leila,,hale_aina,"Cache pollution: cache collision with Sydney venue at 128 Longueville Rd Lane Cove NSW.",2026-05-28

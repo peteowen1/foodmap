@@ -170,6 +170,19 @@ geocode_cache_apply <- function(restaurants, cache_path, country = NULL,
       "formatted_address", "place_id", "neighborhood")
   )
   cached <- cached[!is.na(cached$latitude), cache_cols, drop = FALSE]
+
+  # Pre-filter to cache rows whose coords are in the target country.
+  # Without this, NA-suburb venues collide across countries: an
+  # Australian "Leila" cached from a Sydney scrape would match a
+  # Hawaiian "Leila" via NA == NA on the join key, then push its
+  # Australian formatted_address into the Honolulu row (which the
+  # backfill step at the end of geocode_restaurants then copies to
+  # `address`). Self-heal wipes lat/lng after the join but the
+  # damage to `address` is permanent across runs.
+  if (!is.null(country) && !is.na(country)) {
+    in_target <- is_in_country(cached$latitude, cached$longitude, country)
+    cached <- cached[in_target, , drop = FALSE]
+  }
   cached <- cached[!duplicated(cached[, c("name", "suburb")]), , drop = FALSE]
 
   before <- sum(!is.na(restaurants$latitude))
