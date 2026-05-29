@@ -42,7 +42,7 @@ scrape_eater <- function(city = "san-francisco",
       }
     )
     if (is.null(html_str)) return(NULL)
-    eater_parse_guide(html_str, slug = slug)
+    eater_parse_guide(html_str, slug = slug, guide_url = url)
   })
   results <- purrr::compact(results)
   if (length(results) == 0) {
@@ -98,7 +98,11 @@ eater_default_guides <- function(city) {
       "best-ramen-nyc-restaurants",
       "best-brunch-restaurants-nyc",
       "best-coffee-shops-nyc",
-      "best-bagels-nyc"
+      "best-bagels-nyc",
+      # Cafe/bakery/bar expansion - May 2026 audit. Only slugs that
+      # currently 200 on ny.eater.com. The bar/coffee categories use
+      # non-obvious slugs and most of NYC's coverage is wired here.
+      "best-bakeries-nyc"
     ),
     `los-angeles` = c(
       "best-los-angeles-restaurants-eater-38-essential",
@@ -108,7 +112,13 @@ eater_default_guides <- function(city) {
       "best-sushi-los-angeles",
       "best-ramen-los-angeles",
       "best-coffee-shops-los-angeles",
-      "best-tacos-los-angeles"
+      "best-tacos-los-angeles",
+      # Cafe/bakery/bar expansion - May 2026 audit. All four URLs
+      # tested 200 (best-coffee-X via a single 301 redirect).
+      "best-coffee-los-angeles",
+      "best-bakeries-los-angeles",
+      "best-cocktail-bars-los-angeles",
+      "best-wine-bars-los-angeles"
     ),
     london = c(
       "best-french-restaurants-london",
@@ -117,7 +127,13 @@ eater_default_guides <- function(city) {
       "best-special-occasion-restaurants-london-splurge-meals",
       "borough-market-best-restaurants-opening-times",
       "iconic-dishes-london-best-restaurant-dishes",
-      "best-biryanis-london"
+      "best-biryanis-london",
+      # Cafe/bakery/bar expansion - May 2026 audit. All four URLs
+      # tested 200 (bakeries via a single 301 redirect).
+      "best-coffee-shops-london",
+      "best-bakeries-london",
+      "best-cocktail-bars-london",
+      "best-wine-bars-london"
     ),
     cli::cli_abort("No default Eater guides for {.val {city}}")
   )
@@ -132,8 +148,13 @@ eater_default_guides <- function(city) {
 #'   tag - Eater doesn't expose `servesCuisine` on its map pages, so
 #'   this is the most reliable signal we have. NA for flagship lists
 #'   without an implied cuisine.
+#' @param guide_url Full URL to the guide article. When supplied, each
+#'   row's `url` is set to `guide_url#venue_slug` so map popups link
+#'   straight to Eater's writeup for that specific venue. NA leaves
+#'   url empty (back-compat path).
 #' @noRd
-eater_parse_guide <- function(html_str, slug = NA_character_) {
+eater_parse_guide <- function(html_str, slug = NA_character_,
+                              guide_url = NA_character_) {
   # Each venue's data is interleaved in the article HTML. The pattern is
   #   "location":{"latitude":X,"longitude":Y},"name":"NAME"
   # followed (within ~3 KB) by
@@ -176,6 +197,16 @@ eater_parse_guide <- function(html_str, slug = NA_character_) {
       cuisine_from_slug
     }
 
+    # Per-venue URL: anchor-link straight to this venue's writeup
+    # inside the guide article. NA when guide_url wasn't supplied or
+    # the venue slug couldn't be extracted (no useful anchor).
+    venue_url <- if (!is.na(guide_url) && !is.na(venue_slug) &&
+                     nzchar(venue_slug)) {
+      paste0(guide_url, "#", venue_slug)
+    } else {
+      NA_character_
+    }
+
     tibble::tibble(
       name         = name,
       suburb       = suburb,
@@ -188,7 +219,7 @@ eater_parse_guide <- function(html_str, slug = NA_character_) {
       rating_scale = NA_character_,
       latitude     = lat,
       longitude    = lng,
-      url          = NA_character_
+      url          = venue_url
     )
   })
 

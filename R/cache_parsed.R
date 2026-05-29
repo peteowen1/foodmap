@@ -103,6 +103,7 @@ cached_scrape <- function(key, expr, cache_dir = "cache/parsed",
   on.exit()
 
   manifest <- build_parsed_manifest(urls_touched, html_cache_dir)
+  manifest$code_mtime <- newest_code_mtime()
 
   dir.create(cache_dir, showWarnings = FALSE, recursive = TRUE)
   saveRDS(result, rds_path)
@@ -182,6 +183,20 @@ parsed_cache_valid <- function(rds_path, manifest_path, ttl_hours) {
   )
   if (is.null(manifest)) return(FALSE)
 
+  # Invalidate when any R/*.R file has been touched since the cache
+  # was written. Catches scraper-logic changes that mtime-based URL
+  # invalidation can't see - e.g. adding new sections to a multi-pull
+  # scraper while the previously-tracked URLs all stay unchanged.
+  # Older caches without a code_mtime field skip this check (treat as
+  # valid pre-feature behaviour).
+  if (!is.null(manifest$code_mtime)) {
+    cur_code <- newest_code_mtime()
+    if (!is.na(cur_code) && !is.na(manifest$code_mtime) &&
+        cur_code > manifest$code_mtime) {
+      return(FALSE)
+    }
+  }
+
   n_urls <- manifest$n_urls %||% 0L
   if (n_urls > 0 && is.data.frame(manifest$urls)) {
     cps <- manifest$urls$cache_path
@@ -200,4 +215,21 @@ parsed_cache_valid <- function(rds_path, manifest_path, ttl_hours) {
     difftime(Sys.time(), file.mtime(rds_path), units = "hours")
   )
   rds_age_hours <= ttl_hours
+}
+
+
+#' Newest mtime across all R/*.R files as an ISO-8601 string
+#'
+#' Used as a coarse "package version" fingerprint in parsed-cache
+#' manifests so any source-code change (added section, fixed parse
+#' bug, schema tweak) invalidates the parsed caches even when the
+#' tracked HTML URLs are unchanged. Returns NA when no R files are
+#' found (running outside a package checkout) - the validator treats
+#' that as "skip the check".
+#' @noRd
+newest_code_mtime <- function(r_dir = "R") {
+  if (!dir.exists(r_dir)) return(NA_character_)
+  files <- list.files(r_dir, pattern = "\\.R$", full.names = TRUE)
+  if (length(files) == 0) return(NA_character_)
+  format(max(file.mtime(files)), "%Y-%m-%dT%H:%M:%S")
 }

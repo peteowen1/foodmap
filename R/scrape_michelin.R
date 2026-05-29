@@ -75,19 +75,19 @@ scrape_michelin <- function(city = "san-francisco",
   # Michelin's CDN runs an AWS WAF that flips into bot-challenge mode
   # at roughly 2-3 req/sec. Sustained 1 req/sec stays under the
   # threshold reliably. Failed pages get one slow retry at the end.
+  #
+  # CRASH ISOLATION: running michelin_parse_detail in-process accumulates
+  # state in libxml2/rvest that segfaults R after ~25-50 calls (confirmed
+  # on SF and NY; the specific URLs are not the cause - they parse fine
+  # in isolation). We batch via callr worker processes so a crashed worker
+  # only kills its own batch, not the parent run. When callr is not
+  # available we fall back to the original in-process loop and warn.
   n <- length(detail_urls)
-  raw <- purrr::imap(detail_urls, function(url, idx) {
-    if (idx %% 25 == 0) cli::cli_alert_info("  ...{idx}/{n}")
-    Sys.sleep(MICHELIN_RATE_SECS)
-    tryCatch(
-      michelin_parse_detail(
-        url,
-        use_cache = use_cache,
-        max_age_hours = max_age_hours
-      ),
-      error = function(e) NULL
-    )
-  })
+  raw <- michelin_parse_resiliently(
+    detail_urls,
+    use_cache = use_cache,
+    max_age_hours = max_age_hours
+  )
 
   failed_idx <- which(purrr::map_lgl(raw, is.null))
   if (length(failed_idx) > 0) {
@@ -351,4 +351,106 @@ michelin_price_to_int <- function(price_text) {
   if (grepl("reasonable", s))                         return(2L)
   if (grepl("easy on the wallet|wallet|pocket", s))   return(1L)
   NA_integer_
+}
+
+
+
+#' Parse Michelin detail URLs in isolated worker batches
+#'
+#' Wraps the inner loop of `scrape_michelin()` to survive the libxml2/
+#' rvest accumulator segfault that kills R after ~25-50 read_html()
+#' calls in one process. Each batch runs in its own `callr::r()`
+#' subprocess; a crashed worker only loses its batch's URLs. When
+#' callr is not installed the loop runs in-process and emits a warning.
+#'
+#' @param detail_urls Character vector of full Michelin detail URLs.
+#' @param batch_size Integer. URLs per worker. Default 15 - empirically
+#'   below the observed crash threshold with safety margin.
+#' @return List of tibbles (or NULLs), one per URL, in input order.
+#'   Matches the original `purrr::imap` shape so the rest of
+#'   `scrape_michelin()` is unchanged.
+#' @noRd
+michelin_parse_resiliently <- function(detail_urls, use_cache,
+                                       max_age_hours, batch_size = 15L) {
+  n <- length(detail_urls)
+  if (!rlang::is_installed("callr")) {
+    cli::cli_warn(c(
+      "callr not installed; running Michelin detail parsing in-process.",
+      "i" = "R may segfault after ~25-50 pages. \
+             Install with {.code install.packages('callr')}."
+    ))
+    return(michelin_parse_batch(detail_urls, use_cache, max_age_hours))
+  }
+
+  batches <- split(detail_urls, ceiling(seq_along(detail_urls) / batch_size))
+  cli::cli_alert_info(
+    "Parsing {n} detail page{?s} in {length(batches)} worker batch{?es} \
+     of <= {batch_size}"
+  )
+
+  results <- vector("list", n)
+  cursor <- 0L
+  pkg_root <- getwd()  # callr inherits cwd; this is the foodmap repo root
+                       # in dev. For installed-pkg users we fall back to library().
+
+  for (b in seq_along(batches)) {
+    batch <- batches[[b]]
+    cli::cli_alert_info(
+      "  batch {b}/{length(batches)} ({length(batch)} URL{?s})"
+    )
+    batch_results <- tryCatch(
+      callr::r(
+        function(urls, use_cache, max_age_hours, pkg_root) {
+          # Load foodmap inside the worker. Prefer devtools::load_all
+          # in dev (pkg_root has DESCRIPTION); fall back to library().
+          if (file.exists(file.path(pkg_root, "DESCRIPTION")) &&
+              requireNamespace("devtools", quietly = TRUE)) {
+            devtools::load_all(pkg_root, quiet = TRUE)
+          } else {
+            library(foodmap)
+          }
+          foodmap:::michelin_parse_batch(urls, use_cache, max_age_hours)
+        },
+        args = list(
+          urls = batch,
+          use_cache = use_cache,
+          max_age_hours = max_age_hours,
+          pkg_root = pkg_root
+        )
+      ),
+      error = function(e) {
+        cli::cli_warn(
+          "Batch {b} worker died: {conditionMessage(e)}. \
+           {length(batch)} URL{?s} lost from this batch."
+        )
+        # Return NULLs so the rest of the run continues.
+        vector("list", length(batch))
+      }
+    )
+
+    # Write into the right slice of results so the order matches input.
+    results[(cursor + 1L):(cursor + length(batch))] <- batch_results
+    cursor <- cursor + length(batch)
+  }
+
+  results
+}
+
+
+#' Parse a chunk of Michelin detail URLs in-process
+#'
+#' Used both inside callr worker batches and as the no-callr fallback.
+#' Keeps the WAF rate-limit and per-URL tryCatch in one place.
+#' @noRd
+michelin_parse_batch <- function(urls, use_cache, max_age_hours) {
+  n <- length(urls)
+  purrr::imap(urls, function(url, idx) {
+    if (idx %% 25 == 0) cli::cli_alert_info("    ...{idx}/{n}")
+    Sys.sleep(MICHELIN_RATE_SECS)
+    tryCatch(
+      michelin_parse_detail(url, use_cache = use_cache,
+                            max_age_hours = max_age_hours),
+      error = function(e) NULL
+    )
+  })
 }

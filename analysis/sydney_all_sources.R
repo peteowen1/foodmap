@@ -6,6 +6,7 @@ devtools::load_all()
 
 all <- scrape_all_sources("sydney", use_cache = TRUE) |>
   deduplicate_restaurants() |>
+  apply_manual_excludes(city = "sydney") |>
   geocode_restaurants(country = "AU", city = "sydney") |>
   infer_missing_price() |>
   harmonize_sources()

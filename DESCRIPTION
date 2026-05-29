@@ -28,6 +28,7 @@ Imports:
     tibble,
     xml2
 Suggests:
+    callr,
     chromote,
     htmltools,
     htmlwidgets,

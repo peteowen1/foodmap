@@ -54,6 +54,10 @@ export_kml(deduped, path)          → .kml with folders per source + "multiple"
 | AGFG | `scrape_agfg()` | syd, mel, bri, adl, per, hob, canberra, darwin, gold-coast | Static HTML + AJAX pagination + JSON-LD detail pages |
 | Urban List | `scrape_urban_list()` | syd, mel | Static HTML (H2/H3+H4 pattern) |
 | Good Food Guide | `scrape_good_food_guide()` | syd, mel | Static HTML (JSON-LD keywords, partial — paywall limits) |
+| Concrete Playground | `scrape_concrete_playground()` | syd, mel | JSON-LD venue cards across 3 sections: **restaurants + bars + cafes** |
+| Sprudge (coffee) | `scrape_sprudge()` | sf, ny, la, london, syd, mel | WordPress search → article spotlights (Coffee Design / Sprudge Maps / Build-Outs) |
+| Eater | `scrape_eater()` | sf, ny, la, london | Inline JSON in map pages. Per-city guide slugs include best-bakeries, best-coffee, best-cocktail-bars where Eater publishes them. |
+| Michelin Guide | `scrape_michelin()` | sf, ny, la, london | JSON-LD detail pages, parsed in callr worker batches (≤15 URLs/batch) to isolate libxml2 segfaults from the parent R process |
 
 All scrapers are dispatched via `scrape_restaurants(city, source)`.
 

@@ -17,11 +17,9 @@
 
 devtools::load_all()
 
-# michelin skipped: scraper aborts the R process mid-parse on NY's Guide
-# (~357 detail pages). Diagnose separately; revisit when fixed.
-all <- scrape_all_sources("new-york", use_cache = TRUE,
-                          skip_sources = "michelin") |>
+all <- scrape_all_sources("new-york", use_cache = TRUE) |>
   deduplicate_restaurants() |>
+  apply_manual_excludes(city = "new-york") |>
   geocode_restaurants(country = "US", city = "new-york") |>
   infer_missing_price() |>
   harmonize_sources()

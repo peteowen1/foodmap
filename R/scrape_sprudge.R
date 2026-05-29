@@ -15,8 +15,9 @@
 #' Cuisine is set to `"Coffee"` for every venue so the cafe filter on
 #' the rendered map picks them up without further tagging.
 #'
-#' @param city Character. Currently only `"san-francisco"`. Default
-#'   `"san-francisco"`.
+#' @param city Character. Supported cities are `"san-francisco"`,
+#'   `"new-york"`, `"los-angeles"`, `"london"`, `"sydney"`, and
+#'   `"melbourne"`. Default `"san-francisco"`.
 #' @param extra_guides Character vector of extra Sprudge article URLs
 #'   to harvest on top of the search-driven defaults. Useful for
 #'   one-off spotlight articles that don't match the default search
@@ -68,7 +69,7 @@ scrape_sprudge <- function(city = "san-francisco",
       }
     )
     if (is.null(html_str)) return(NULL)
-    sprudge_parse_article(html_str, u)
+    sprudge_parse_article(html_str, u, city = city)
   }) |> purrr::compact()
 
   if (length(rows) == 0) {
@@ -82,18 +83,34 @@ scrape_sprudge <- function(city = "san-francisco",
 }
 
 
-#' Default search queries used to surface SF cafe articles
+#' Default search queries used to surface city cafe articles
+#'
+#' Each city's queries follow the same three-template pattern that
+#' surfaces the most cafe-spotlight coverage:
+#'   coffee design <city>
+#'   sprudge maps <city>
+#'   build-outs <city>
+#'
+#' Plus an open <city> cafe query to catch one-off founder profiles.
 #' @noRd
 sprudge_default_queries <- function(city) {
-  switch(city,
-    `san-francisco` = c(
-      "coffee design san francisco",
-      "sprudge maps san francisco",
-      "san francisco cafe",
-      "build-outs coffee san francisco",
-      "build-outs san francisco"
-    ),
+  # Sprudge's URL slug for each city - matches the substring we look
+  # for in article URLs via sprudge_is_spotlight().
+  city_phrase <- switch(city,
+    `san-francisco` = "san francisco",
+    `new-york`      = "new york",
+    `los-angeles`   = "los angeles",
+    london          = "london",
+    sydney          = "sydney",
+    melbourne       = "melbourne",
     cli::cli_abort("No default Sprudge queries for {.val {city}}")
+  )
+  c(
+    paste("coffee design", city_phrase),
+    paste("sprudge maps", city_phrase),
+    paste("build-outs coffee", city_phrase),
+    paste("build-outs", city_phrase),
+    paste(city_phrase, "cafe")
   )
 }
 
@@ -123,32 +140,65 @@ sprudge_search_urls <- function(query, use_cache = FALSE) {
 }
 
 
-#' Decide whether a Sprudge article URL looks like an SF cafe spotlight
+#' Decide whether a Sprudge article URL looks like a cafe spotlight
 #'
 #' Restricts to three reliable cafe-spotlight series:
 #' "Coffee Design", "Sprudge Maps", and "Build-Outs" (new-cafe
 #' openings). All three series spotlight a single venue per article.
-#' Combined with the san-francisco URL token, this filters out
-#' festival, conference, lawsuit, and other unrelated SF coverage.
+#' Combined with the city slug, this filters out festival, conference,
+#' lawsuit, and other unrelated coverage.
 #' @noRd
 sprudge_is_spotlight <- function(urls, city) {
   if (length(urls) == 0) return(logical())
-  if (!identical(city, "san-francisco")) return(rep(FALSE, length(urls)))
+  city_slug <- sprudge_city_slug(city)
+  if (is.null(city_slug)) return(rep(FALSE, length(urls)))
   series_re <- "/(coffee-design|sprudge-maps|build-outs)[^/]*"
-  city_re   <- "san-francisco"
-  grepl(series_re, urls) & grepl(city_re, urls)
+  grepl(series_re, urls) & grepl(city_slug, urls, fixed = TRUE)
+}
+
+
+#' URL-slug form of each city used in Sprudge article paths
+#' @noRd
+sprudge_city_slug <- function(city) {
+  switch(city,
+    `san-francisco` = "san-francisco",
+    `new-york`      = "new-york",
+    `los-angeles`   = "los-angeles",
+    london          = "london",
+    sydney          = "sydney",
+    melbourne       = "melbourne",
+    NULL
+  )
+}
+
+
+#' Human-readable city name used in Sprudge og:title strings
+#'
+#' Used by `sprudge_clean_name()` to strip the trailing location clause
+#' off article titles for cities other than SF.
+#' @noRd
+sprudge_city_display <- function(city) {
+  switch(city,
+    `san-francisco` = "San Francisco",
+    `new-york`      = "New York",
+    `los-angeles`   = "Los Angeles",
+    london          = "London",
+    sydney          = "Sydney",
+    melbourne       = "Melbourne",
+    NULL
+  )
 }
 
 
 #' Parse a Sprudge article into a single venue row
 #' @noRd
-sprudge_parse_article <- function(html_str, url) {
+sprudge_parse_article <- function(html_str, url, city = "san-francisco") {
   og_title <- stringr::str_match(
     html_str, 'property="og:title"\\s+content="([^"]+)"'
   )[1, 2]
   if (is.na(og_title)) return(NULL)
 
-  name <- sprudge_clean_name(og_title)
+  name <- sprudge_clean_name(og_title, city = city)
   if (is.na(name) || !nzchar(name)) return(NULL)
 
   og_desc <- stringr::str_match(
@@ -156,9 +206,13 @@ sprudge_parse_article <- function(html_str, url) {
   )[1, 2]
   if (!is.na(og_desc)) og_desc <- decode_html_entities(og_desc)
 
+  # The suburb column is the city display name - "San Francisco",
+  # "New York", etc. - so downstream consumers can group by city
+  # without needing to look at the URL. Real neighbourhoods come
+  # from the geocoder when it resolves the address.
   tibble::tibble(
     name         = name,
-    suburb       = "San Francisco",
+    suburb       = sprudge_city_display(city) %||% NA_character_,
     address      = NA_character_,
     cuisine      = "Coffee",
     category     = "Cafe",
@@ -181,9 +235,10 @@ sprudge_parse_article <- function(html_str, url) {
 #'
 #' Strategy: strip the trailing site brand, strip the leading series
 #' prefix ("Coffee Design:" / "Sprudge Maps Spotlight:" / etc.), then
-#' lop off the trailing location clause (" In San Francisco...").
+#' lop off the trailing location clause (" In <city>..."). The location
+#' clause varies by city so the city name pattern is built dynamically.
 #' @noRd
-sprudge_clean_name <- function(title) {
+sprudge_clean_name <- function(title, city = "san-francisco") {
   if (is.na(title)) return(NA_character_)
   title <- decode_html_entities(title)
   title <- stringr::str_trim(title)
@@ -202,16 +257,22 @@ sprudge_clean_name <- function(title) {
     ""
   )
 
-  # Drop trailing location clause: " In San Francisco, CA" / " In SF" /
-  # " (San Francisco)" / ", San Francisco, CA". Matches both " In " and
-  # " in " forms.
+  # Build a case-insensitive name pattern for the city. The display
+  # form ("San Francisco", "New York") matches what appears in titles.
+  city_display <- sprudge_city_display(city) %||% "San Francisco"
+  city_re <- gsub("\\s+", "\\\\s+", city_display)
+
+  # Drop trailing location clause: " In <city>..." / " of <city>..." /
+  # " at <city>..."; also "(<city>)" and ", <city>, ..." variants.
   title <- stringr::str_replace(
     title,
-    "(?i)\\s+(?:in|of|at)\\s+san\\s+francisco.*$",
+    paste0("(?i)\\s+(?:in|of|at)\\s+", city_re, ".*$"),
     ""
   )
-  title <- stringr::str_replace(title, ",\\s*San\\s+Francisco.*$", "")
-  title <- stringr::str_replace(title, "\\s*\\(San\\s+Francisco\\).*$", "")
+  title <- stringr::str_replace(title,
+                                paste0(",\\s*", city_re, ".*$"), "")
+  title <- stringr::str_replace(title,
+                                paste0("\\s*\\(", city_re, "\\).*$"), "")
 
   # Build-Outs articles often title themselves "Cafe's Third Location"
   # or "Cafe's New Location" -- the geocoder needs the cafe name only.

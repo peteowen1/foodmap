@@ -24,21 +24,59 @@ scrape_concrete_playground <- function(city = "sydney", use_cache = FALSE) {
   city <- validate_city_source(city, "concrete_playground")
   cli::cli_h1("Scraping Concrete Playground: {city}")
 
-  base_url <- cp_directory_url(city)
-  cli::cli_alert_info("Fetching {.url {base_url}}")
-  html_str <- cached_fetch(base_url, use_cache = use_cache)
+  # CP runs three CP-Pick-filtered directories per city: restaurants,
+  # bars, cafes. They share the same card markup so we can reuse one
+  # parser and just point it at each path. Restaurants are typically
+  # ~200-300 picks, bars ~100, cafes ~150 - so the bar/cafe expansion
+  # is roughly a 50% lift in CP-sourced venues.
+  sections <- c("restaurants", "bars", "cafes")
+  per_section <- purrr::map(sections, function(sec) {
+    cp_scrape_section(city = city, section = sec, use_cache = use_cache)
+  })
+  per_section <- purrr::compact(per_section)
+  if (length(per_section) == 0) {
+    cli::cli_abort("No data scraped from any Concrete Playground section.")
+  }
+
+  result <- dplyr::bind_rows(per_section) |>
+    # Same venue can be tagged CP-Pick in multiple sections (a bar that
+    # also serves food shows up under both restaurants and bars). Keep
+    # the first occurrence - sections are processed in order, so the
+    # restaurant variant wins where both exist, which usually carries
+    # the richer cuisine tags.
+    dplyr::distinct(.data$name, .data$suburb, .keep_all = TRUE)
+  cli::cli_alert_success("Found {nrow(result)} venue{?s}")
+  result
+}
+
+
+#' Scrape a single CP section (restaurants / bars / cafes) for a city
+#'
+#' Returns NULL on section-level failure (e.g. 404) so the outer loop
+#' can keep the other sections.
+#' @noRd
+cp_scrape_section <- function(city, section, use_cache) {
+  base_url <- cp_directory_url(city, section)
+  cli::cli_alert_info("Fetching {section} - {.url {base_url}}")
+  html_str <- tryCatch(
+    cached_fetch(base_url, use_cache = use_cache),
+    error = function(e) {
+      cli::cli_warn("CP {section} failed: {conditionMessage(e)}")
+      NULL
+    }
+  )
+  if (is.null(html_str)) return(NULL)
   page1 <- rvest::read_html(html_str)
 
-  # Detect total result count and page count from the rendered HTML so
-  # we know how far to paginate. Falls back to a single page if the
-  # count can't be parsed.
   total <- cp_total_results(page1)
   per_page <- length(rvest::html_elements(page1, "li[data-latitude]"))
 
   pages <- list(page1)
   if (!is.na(total) && per_page > 0 && total > per_page) {
     n_pages <- ceiling(total / per_page)
-    cli::cli_alert_info("{total} CP Picks total - fetching {n_pages - 1} more page{?s}")
+    cli::cli_alert_info(
+      "  {total} {section} picks - fetching {n_pages - 1} more page{?s}"
+    )
     for (p in seq.int(2, n_pages)) {
       Sys.sleep(RATE_LIMIT_SECS)
       url_p <- paste0(base_url, "&paged=", p)
@@ -55,37 +93,43 @@ scrape_concrete_playground <- function(city = "sydney", use_cache = FALSE) {
     lapply(pages, function(p) rvest::html_elements(p, "li[data-latitude]")),
     recursive = FALSE, use.names = FALSE
   )
-  cli::cli_alert_info("Parsing {length(cards)} venue card{?s}")
   if (length(cards) == 0) {
-    cli::cli_abort("No venue cards on Concrete Playground page.")
+    cli::cli_warn("No venue cards in CP {section} for {city}")
+    return(NULL)
   }
 
-  raw_results <- purrr::map(cards, cp_parse_card)
-  n_failed <- sum(purrr::map_lgl(raw_results, is.null))
+  raw <- purrr::map(cards, cp_parse_card)
+  n_failed <- sum(purrr::map_lgl(raw, is.null))
   if (n_failed > 0) {
-    cli::cli_warn("{n_failed}/{length(cards)} card{?s} failed to parse")
+    cli::cli_warn("  {n_failed}/{length(cards)} {section} card{?s} failed to parse")
   }
-  results <- purrr::compact(raw_results)
-  if (length(results) == 0) {
-    cli::cli_abort("Could not extract any venue data from Concrete Playground.")
-  }
+  rows <- purrr::compact(raw)
+  if (length(rows) == 0) return(NULL)
 
-  result <- dplyr::bind_rows(results) |>
-    dplyr::distinct(.data$name, .data$suburb, .keep_all = TRUE)
-  cli::cli_alert_success("Found {nrow(result)} venue{?s}")
-  result
+  out <- dplyr::bind_rows(rows)
+  # Override the parser-default "Restaurant" category for bars and cafes
+  # so the downstream category-mix analysis correctly tallies them. The
+  # cp_parse_card function returns the JSON-LD venueType which is usually
+  # "Restaurant" even for bars/cafes; the section path is more reliable.
+  if (section == "bars" && "category" %in% names(out)) out$category <- "Bar"
+  if (section == "cafes" && "category" %in% names(out)) out$category <- "Cafe"
+
+  cli::cli_alert_info("  parsed {nrow(out)} {section}")
+  out
 }
 
 
-#' Build the CP-Pick filtered directory URL for a city
+#' Build the CP-Pick filtered directory URL for a city + section
 #' @noRd
-cp_directory_url <- function(city) {
-  base <- switch(city,
-    sydney    = "https://concreteplayground.com/sydney/restaurants",
-    melbourne = "https://concreteplayground.com/melbourne/restaurants",
+cp_directory_url <- function(city, section = "restaurants") {
+  if (!city %in% c("sydney", "melbourne")) {
     cli::cli_abort("Unknown city for Concrete Playground: {.val {city}}")
-  )
-  paste0(base, "?features%5B%5D=CP+Pick")
+  }
+  if (!section %in% c("restaurants", "bars", "cafes")) {
+    cli::cli_abort("Unknown CP section: {.val {section}}")
+  }
+  paste0("https://concreteplayground.com/", city, "/", section,
+         "?features%5B%5D=CP+Pick")
 }
 
 

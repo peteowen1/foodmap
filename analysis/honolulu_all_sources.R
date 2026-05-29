@@ -20,6 +20,7 @@ devtools::load_all()
 
 all <- scrape_all_sources("honolulu", use_cache = TRUE) |>
   deduplicate_restaurants() |>
+  apply_manual_excludes(city = "honolulu") |>
   geocode_restaurants(country = "US", city = "honolulu") |>
   infer_missing_price() |>
   harmonize_sources()
