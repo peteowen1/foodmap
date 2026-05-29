@@ -17,6 +17,7 @@ all <- scrape_all_sources("melbourne", use_cache = TRUE) |>
 
 dir.create("output", showWarnings = FALSE)
 export_csv(all, "output/melbourne_all_sources.csv")
+export_diagnostics(all, "output/melbourne_diagnostics.csv")
 
 if (any(!is.na(all$latitude))) {
   export_kml(all, "output/melbourne_all_sources.kml")

@@ -154,3 +154,91 @@ test_that("nominatim_user_agent identifies the application", {
   expect_true(nzchar(ua))
   expect_match(ua, "foodmap", fixed = TRUE)
 })
+
+test_that("OSM geocode retries with address-only query when first attempt misses", {
+  # The retry path is the load-bearing reason we can switch to OSM and
+  # still hit a reasonable percentage of venues. Two assertions:
+  #   1. nominatim_search() is called twice for the missing row - once
+  #      with the full name+address query, once with the address-only
+  #      fallback.
+  #   2. The fallback's hit is used to populate coords.
+  skip_if_not_installed("withr")
+  cache_dir <- withr::local_tempdir()
+  # Point at a path that doesn't exist so the cache-apply step is a no-op.
+  # Writing an empty header-only CSV here would round-trip the suburb
+  # column as logical(NA), which dplyr::rows_update can't cast against
+  # a character key.
+  cache_path <- file.path(cache_dir, "nope.csv")
+
+  restaurants <- tibble::tibble(
+    name      = "Hopeless Match",
+    suburb    = "Sydney",
+    address   = "1 Macquarie Street",
+    latitude  = NA_real_,
+    longitude = NA_real_
+  )
+
+  call_log <- list()
+  stub_search <- function(query, country = NULL, city = NULL,
+                          user_agent = NULL) {
+    call_log[[length(call_log) + 1]] <<- query
+    if (grepl("Hopeless Match", query, fixed = TRUE)) {
+      return(NULL)  # name-bearing query misses
+    }
+    # Address-only retry succeeds.
+    list(lat = -33.86, lng = 151.21,
+         address = "1 Macquarie Street, Sydney NSW 2000",
+         place_id = "node/1", neighborhood = "Circular Quay")
+  }
+
+  # Bypass the loop sleep so the test runs instantly. NOMINATIM_RATE_LIMIT_SECS
+  # is consulted via Sys.sleep(); stubbing that to a no-op is simplest.
+  testthat::local_mocked_bindings(
+    nominatim_search = stub_search
+  )
+  withr::local_envvar(c(GOOGLE_PLACES_API_KEY = ""))
+
+  result <- suppressMessages(geocode_restaurants(
+    restaurants, cache_path = cache_path,
+    country = "AU", city = "sydney", provider = "osm"
+  ))
+
+  expect_equal(length(call_log), 2)
+  expect_match(call_log[[1]], "Hopeless Match", fixed = TRUE)
+  expect_false(grepl("Hopeless Match", call_log[[2]], fixed = TRUE))
+  expect_equal(result$latitude, -33.86)
+})
+
+test_that("OSM geocode does NOT retry when the row has no address", {
+  # Retry is only useful when there's an alternate signal to send. With
+  # NA address the fallback query is identical to the original (same
+  # name+suburb), so we'd just burn a request for no chance of a
+  # different result.
+  skip_if_not_installed("withr")
+  cache_dir <- withr::local_tempdir()
+  cache_path <- file.path(cache_dir, "nope.csv")  # absent -> cache-apply skips
+
+  restaurants <- tibble::tibble(
+    name      = "No Address Cafe",
+    suburb    = "Newtown",
+    address   = NA_character_,
+    latitude  = NA_real_,
+    longitude = NA_real_
+  )
+
+  call_count <- 0L
+  stub_search <- function(query, country = NULL, city = NULL,
+                          user_agent = NULL) {
+    call_count <<- call_count + 1L
+    NULL
+  }
+  testthat::local_mocked_bindings(nominatim_search = stub_search)
+  withr::local_envvar(c(GOOGLE_PLACES_API_KEY = ""))
+
+  suppressMessages(suppressWarnings(geocode_restaurants(
+    restaurants, cache_path = cache_path,
+    country = "AU", city = "sydney", provider = "osm"
+  )))
+
+  expect_equal(call_count, 1L)
+})

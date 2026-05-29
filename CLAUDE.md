@@ -74,7 +74,13 @@ Two backends, selected via `geocode_restaurants(provider = ...)`:
 
 **There is no automatic fallback between backends.** A miss on the chosen provider leaves the row's coords as `NA` and prints a warning. This is the budget guarantee.
 
+**OSM-only address-only retry**: when the name+address+suburb query misses, the loop retries with an address-only query (dropping the venue name). Nominatim is much stronger on pure addresses than venue names — a venue often has a building node even when its name isn't tagged. The retry costs +1.1s wall-clock but $0 (OSM only — gated by `provider == "osm"` so it never fires for Google).
+
 Query format (both backends): `"{name} {address} {suburb} {state} {country}"`, built by `build_geocode_query()`. Idempotent — skips rows that already have coordinates. AGFG scraper can fetch coords from JSON-LD detail pages, reducing API usage for either backend.
+
+### Diagnostics
+
+`export_diagnostics(restaurants, path)` writes a `{city}_diagnostics.csv` listing every row missing one or more key fields (`latitude`, `address`, `description`, `price_range`, `cuisine`, `url`). Each row gets an `issues` column (comma-separated list of missing fields) and an `issue_count` column for worst-first sorting. Wired into every analysis script. Use the CSV to drive manual fixes via `inst/extdata/manual_excludes.csv` or one-off coord/description corrections.
 
 ### HTTP caching
 

@@ -134,6 +134,33 @@ geocode_restaurants <- function(restaurants,
       google = places_text_search(query, api_key, country = country, city = city)
     )
 
+    # OSM address-only retry. Nominatim is much stronger on pure street
+    # addresses than venue names - "Aria 1 Macquarie Street Sydney" may
+    # miss when "1 Macquarie Street Sydney" hits. We only retry when:
+    #   - We're on the OSM backend (Google retries cost real money).
+    #   - The row has a usable address (otherwise the fallback query is
+    #     identical to the original and we'd just waste a request).
+    #   - The fallback query differs from the original (it will when
+    #     name is non-blank, which is the common case for misses).
+    # The extra call counts against the 1 req/sec budget, so we sleep
+    # the rate-limit interval before firing it.
+    if (is.null(result) && provider == "osm" &&
+        !is.na(row$address) && nzchar(trimws(row$address))) {
+      fallback <- build_geocode_query(
+        name = NA_character_, suburb = row$suburb, address = row$address,
+        country = country, city = city
+      )
+      if (!identical(fallback, query)) {
+        Sys.sleep(sleep_secs)
+        result <- nominatim_search(fallback, country = country, city = city)
+        if (!is.null(result)) {
+          cli::cli_alert_info(
+            "Recovered {.val {row$name}} via address-only fallback"
+          )
+        }
+      }
+    }
+
     if (!is.null(result)) {
       restaurants$latitude[i]          <- result$lat
       restaurants$longitude[i]         <- result$lng
