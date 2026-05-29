@@ -4,12 +4,16 @@
 \alias{scrape_all_sources}
 \title{Scrape restaurants from all available sources for a city}
 \usage{
-scrape_all_sources(city = "sydney", use_cache = FALSE)
+scrape_all_sources(city = "sydney", use_cache = FALSE, use_parsed_cache = TRUE)
 }
 \arguments{
 \item{city}{Character. City to scrape. Default \code{"sydney"}.}
 
 \item{use_cache}{Logical. Cache HTTP responses. Default \code{FALSE}.}
+
+\item{use_parsed_cache}{Logical. Cache parsed tibbles per (source,
+city). Auto-invalidates when underlying HTML cache files change.
+Defaults to \code{TRUE}; only effective when \code{use_cache = TRUE}.}
 }
 \value{
 A tibble with all standard columns plus a \code{source} column

@@ -86,6 +86,16 @@ Query format (both backends): `"{name} {address} {suburb} {state} {country}"`, b
 
 `use_cache = TRUE` on scrapers stores responses in `cache/` directory (24h expiry). Implemented via `cached_fetch()` in `R/cache.R`. Good Food Guide excluded (uses chromote, not plain HTTP).
 
+### Parsed-tibble caching
+
+Layered above the HTML cache. When `scrape_restaurants(use_parsed_cache = TRUE, use_cache = TRUE)` (both default to TRUE / honored only together), the parsed tibble output of each scraper call is saved to `cache/parsed/{source}_{city}.rds` with a sidecar `{source}_{city}.manifest.json` listing every HTML cache file the scrape touched. Subsequent runs check the manifest: if every tracked HTML file still exists with matching mtime, the parsed tibble is returned without re-parsing.
+
+URL tracking is automatic: `cached_fetch()` calls `cache_track_record(url)` after every retrieval, and `cached_scrape()` activates the tracker around the expression eval. Chromote-driven scrapers (Good Food Guide, Broadsheet fallback) bypass `cached_fetch()`, so their URL list is empty and the cache falls back to a 24h TTL on the parsed file itself.
+
+Storage format: RDS (justified per the data-conventions carve-out for R-specific object types — tibbles carry class metadata and source-typed columns that don't round-trip cleanly through CSV/parquet without a schema declaration). The cache is internal and never shipped externally.
+
+Disable per-run with `scrape_all_sources(use_parsed_cache = FALSE)` or by setting `use_cache = FALSE` (which implicitly disables the parsed cache too — fresh HTTP means fresh parse).
+
 ### Deduplication
 
 `deduplicate_restaurants()` matches venues by normalized name + suburb (case-insensitive, punctuation-stripped, NA suburb treated as wildcard). Keeps the row with most non-NA fields, fills gaps from other copies, combines `source` values, picks longest description.

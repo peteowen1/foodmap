@@ -64,6 +64,7 @@ cached_fetch <- function(url, use_cache = FALSE, max_age_hours = 24,
     cached <- cache_get(url, max_age_hours = max_age_hours)
     if (!is.null(cached) && is_valid(cached)) {
       cli::cli_alert_info("Using cached response for {.url {url}}")
+      cache_track_record(url)
       return(cached)
     }
   }
@@ -84,6 +85,10 @@ cached_fetch <- function(url, use_cache = FALSE, max_age_hours = 24,
 
   if (use_cache) {
     cache_set(url, html)
+    # Only track when the response actually landed on disk - otherwise
+    # the parsed-cache manifest stores a URL whose cache_path doesn't
+    # exist, and validation fails forever on the next run.
+    cache_track_record(url)
   }
 
   html

@@ -8,7 +8,8 @@ scrape_restaurants(
   city = "sydney",
   source = "broadsheet",
   use_chromote = FALSE,
-  use_cache = FALSE
+  use_cache = FALSE,
+  use_parsed_cache = TRUE
 )
 }
 \arguments{
@@ -28,6 +29,13 @@ Default \code{FALSE}.}
 \item{use_cache}{Logical. If \code{TRUE}, cache HTTP responses locally to avoid
 re-fetching during development. Cached responses expire after 24 hours.
 Default \code{FALSE}.}
+
+\item{use_parsed_cache}{Logical. If \code{TRUE} (and \code{use_cache} is also
+\code{TRUE}), wrap the scrape in \code{cached_scrape()} so the parsed tibble
+itself is cached in \verb{cache/parsed/\{source\}_\{city\}.rds}. Invalidates
+automatically when any underlying HTML cache file changes. Skipped
+when \code{use_cache = FALSE} (the user explicitly wants fresh data).
+Default \code{TRUE}.}
 }
 \value{
 A tibble with columns: name, suburb, address, cuisine, category,

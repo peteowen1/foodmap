@@ -16,6 +16,12 @@
 #' @param use_cache Logical. If `TRUE`, cache HTTP responses locally to avoid
 #'   re-fetching during development. Cached responses expire after 24 hours.
 #'   Default `FALSE`.
+#' @param use_parsed_cache Logical. If `TRUE` (and `use_cache` is also
+#'   `TRUE`), wrap the scrape in `cached_scrape()` so the parsed tibble
+#'   itself is cached in `cache/parsed/{source}_{city}.rds`. Invalidates
+#'   automatically when any underlying HTML cache file changes. Skipped
+#'   when `use_cache = FALSE` (the user explicitly wants fresh data).
+#'   Default `TRUE`.
 #'
 #' @return A tibble with columns: name, suburb, address, cuisine, category,
 #'   description, price_range, rating, rating_scale, latitude, longitude, url.
@@ -23,10 +29,27 @@
 scrape_restaurants <- function(city = "sydney",
                                source = "broadsheet",
                                use_chromote = FALSE,
-                               use_cache = FALSE) {
+                               use_cache = FALSE,
+                               use_parsed_cache = TRUE) {
   source <- match.arg(source, valid_sources())
   city <- validate_city_source(city, source)
 
+  do_scrape <- function() scrape_dispatch(source, city, use_chromote, use_cache)
+
+  if (isTRUE(use_parsed_cache) && isTRUE(use_cache)) {
+    cached_scrape(key = paste0(source, "_", city), do_scrape())
+  } else {
+    do_scrape()
+  }
+}
+
+
+#' Internal dispatch from source name -> scrape function call
+#'
+#' Split out of scrape_restaurants() so cached_scrape() can wrap a single
+#' expression cleanly without nesting two switch() statements.
+#' @noRd
+scrape_dispatch <- function(source, city, use_chromote, use_cache) {
   # gfg_awards and james_beard read from in-memory hand-curated lists
   # rather than HTTP, so use_cache is intentionally not passed - there's
   # nothing to cache.
@@ -64,11 +87,15 @@ scrape_restaurants <- function(city = "sydney",
 #'
 #' @param city Character. City to scrape. Default `"sydney"`.
 #' @param use_cache Logical. Cache HTTP responses. Default `FALSE`.
+#' @param use_parsed_cache Logical. Cache parsed tibbles per (source,
+#'   city). Auto-invalidates when underlying HTML cache files change.
+#'   Defaults to `TRUE`; only effective when `use_cache = TRUE`.
 #'
 #' @return A tibble with all standard columns plus a `source` column
 #'   identifying which guide each venue came from.
 #' @export
-scrape_all_sources <- function(city = "sydney", use_cache = FALSE) {
+scrape_all_sources <- function(city = "sydney", use_cache = FALSE,
+                               use_parsed_cache = TRUE) {
   city <- tolower(city)
   all_sources <- valid_sources()
 
@@ -87,7 +114,9 @@ scrape_all_sources <- function(city = "sydney", use_cache = FALSE) {
   results <- purrr::map(supported, function(src) {
     cli::cli_rule()
     tryCatch({
-      tbl <- scrape_restaurants(city = city, source = src, use_cache = use_cache)
+      tbl <- scrape_restaurants(city = city, source = src,
+                                use_cache = use_cache,
+                                use_parsed_cache = use_parsed_cache)
       tbl$source <- src
       tbl
     }, error = function(e) {
