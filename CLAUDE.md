@@ -67,7 +67,14 @@ Note: Broadsheet does **not** use `<script id="__NEXT_DATA__">`.
 
 ### Geocoding
 
-Uses Google Places API (New) Text Search endpoint. Query format: `"{name} {suburb} Australia"`. Rate-limited via `RATE_LIMIT_SECS` constant (0.2s). Idempotent — skips rows that already have coordinates. AGFG scraper can fetch coords from JSON-LD detail pages, reducing API usage.
+Two backends, selected via `geocode_restaurants(provider = ...)`:
+
+- **`"osm"` (default)** — free OpenStreetMap Nominatim. No API key, no surprise bills, ~1 req/sec (`NOMINATIM_RATE_LIMIT_SECS = 1.1`). Weaker than Google for restaurant-by-name queries (~50–70% hit rate vs ~95%); strong on street addresses. Implementation in `R/geocode_nominatim.R`.
+- **`"google"`** — Google Places API (New) Text Search. Requires `GOOGLE_PLACES_API_KEY`. Pay-per-call (Text Search Pro tier, ~A$0.015–0.048/call). Rate-limited via `RATE_LIMIT_SECS` (0.2s). Use only when explicitly needed — never use as an auto-fallback.
+
+**There is no automatic fallback between backends.** A miss on the chosen provider leaves the row's coords as `NA` and prints a warning. This is the budget guarantee.
+
+Query format (both backends): `"{name} {address} {suburb} {state} {country}"`, built by `build_geocode_query()`. Idempotent — skips rows that already have coordinates. AGFG scraper can fetch coords from JSON-LD detail pages, reducing API usage for either backend.
 
 ### HTTP caching
 

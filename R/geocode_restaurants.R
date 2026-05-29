@@ -35,6 +35,15 @@
 #'   cost the first time you run after the field was added; subsequent
 #'   runs are no-ops because every cached row will have a value (even
 #'   if `NA` - meaning Google didn't return one). Default `FALSE`.
+#' @param provider Character. Geocoding backend to use:
+#'   * `"osm"` (default) - free OpenStreetMap Nominatim. No API key, but
+#'     ~1 req/sec and weaker coverage for restaurant-by-name queries.
+#'   * `"google"` - Google Places API (New) Text Search. Requires
+#'     `GOOGLE_PLACES_API_KEY`. Pay-per-call (~A$0.015-0.048/call). Best
+#'     POI coverage; use only when you explicitly want it.
+#'   There is no automatic fallback between backends - a miss on the
+#'   chosen provider leaves the row's coords as `NA`. This is
+#'   deliberate: it makes the per-run cost predictable.
 #'
 #' @return The input tibble with `latitude`, `longitude`,
 #'   `formatted_address`, `place_id`, and `neighborhood` columns
@@ -46,7 +55,10 @@ geocode_restaurants <- function(restaurants,
                                 force_refresh = FALSE,
                                 country = NULL,
                                 city = NULL,
-                                migrate_neighborhoods = FALSE) {
+                                migrate_neighborhoods = FALSE,
+                                provider = c("osm", "google")) {
+
+  provider <- match.arg(provider)
 
   # Default country: infer from city when possible, else "AU" for
   # back-compat with the original Sydney/Melbourne pipelines. Without
@@ -94,9 +106,20 @@ geocode_restaurants <- function(restaurants,
     return(restaurants)
   }
 
-  cli::cli_h2("Geocoding {n_todo} venue{?s} via Google Places API")
+  provider_label <- switch(provider,
+    osm    = "OpenStreetMap Nominatim",
+    google = "Google Places API"
+  )
+  cli::cli_h2("Geocoding {n_todo} venue{?s} via {provider_label}")
 
-  api_key <- resolve_api_key(api_key)
+  # Only the paid backend needs an API key. Resolving lazily here keeps
+  # the OSM path runnable on a fresh machine with no env setup.
+  if (provider == "google") api_key <- resolve_api_key(api_key)
+
+  sleep_secs <- switch(provider,
+    osm    = NOMINATIM_RATE_LIMIT_SECS,
+    google = RATE_LIMIT_SECS
+  )
 
   cli::cli_progress_bar("Geocoding", total = n_todo)
   idx <- which(needs_geocoding)
@@ -106,7 +129,10 @@ geocode_restaurants <- function(restaurants,
     query <- build_geocode_query(row$name, row$suburb, row$address,
                                  country, city = city)
 
-    result <- places_text_search(query, api_key, country = country, city = city)
+    result <- switch(provider,
+      osm    = nominatim_search(query, country = country, city = city),
+      google = places_text_search(query, api_key, country = country, city = city)
+    )
 
     if (!is.null(result)) {
       restaurants$latitude[i]          <- result$lat
@@ -117,7 +143,7 @@ geocode_restaurants <- function(restaurants,
     }
 
     cli::cli_progress_update()
-    Sys.sleep(RATE_LIMIT_SECS)
+    Sys.sleep(sleep_secs)
   }
 
   cli::cli_progress_done()

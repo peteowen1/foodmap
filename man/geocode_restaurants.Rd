@@ -11,7 +11,8 @@ geocode_restaurants(
   force_refresh = FALSE,
   country = NULL,
   city = NULL,
-  migrate_neighborhoods = FALSE
+  migrate_neighborhoods = FALSE,
+  provider = c("osm", "google")
 )
 }
 \arguments{
@@ -52,6 +53,18 @@ the new structured neighborhood field can be filled in. One-time
 cost the first time you run after the field was added; subsequent
 runs are no-ops because every cached row will have a value (even
 if \code{NA} - meaning Google didn't return one). Default \code{FALSE}.}
+
+\item{provider}{Character. Geocoding backend to use:
+\itemize{
+\item \code{"osm"} (default) - free OpenStreetMap Nominatim. No API key, but
+~1 req/sec and weaker coverage for restaurant-by-name queries.
+\item \code{"google"} - Google Places API (New) Text Search. Requires
+\code{GOOGLE_PLACES_API_KEY}. Pay-per-call (~A$0.015-0.048/call). Best
+POI coverage; use only when you explicitly want it.
+There is no automatic fallback between backends - a miss on the
+chosen provider leaves the row's coords as \code{NA}. This is
+deliberate: it makes the per-run cost predictable.
+}}
 }
 \value{
 The input tibble with \code{latitude}, \code{longitude},

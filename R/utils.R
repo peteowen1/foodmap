@@ -4,6 +4,16 @@
 #' @noRd
 RATE_LIMIT_SECS <- 0.2
 
+#' Pause between Nominatim requests (seconds)
+#'
+#' Nominatim's public endpoint usage policy is "max 1 request per second
+#' from any single source". 1.1s buys us a small safety margin against
+#' clock skew / network jitter; tightening below 1.0 risks an IP ban.
+#' Tune `RATE_LIMIT_SECS` (0.2) for the Google paid path; this constant
+#' is OSM-only.
+#' @noRd
+NOMINATIM_RATE_LIMIT_SECS <- 1.1
+
 #' Broadsheet hotlist URL for a given city
 #' @noRd
 broadsheet_url <- function(city = "sydney") {
