@@ -112,6 +112,23 @@ export_html <- function(restaurants,
   }
   all_sources <- sort(unique(unlist(sources_split)))
 
+  # Category per venue, normalised to one of Restaurant / Cafe / Bar /
+  # Bakery. Anything NA or unrecognised collapses into "Restaurant" so
+  # the legacy schema (every row hardcoded as Restaurant) still behaves.
+  category_norm <- if ("category" %in% names(geo)) {
+    vapply(geo$category, function(c) {
+      if (is.na(c) || !nzchar(c)) return("Restaurant")
+      lc <- tolower(c)
+      if (grepl("bakery|patisserie|pastry", lc)) return("Bakery")
+      if (grepl("cafe|coffee",              lc)) return("Cafe")
+      if (grepl("bar|pub|brewery",          lc)) return("Bar")
+      "Restaurant"
+    }, character(1), USE.NAMES = FALSE)
+  } else {
+    rep("Restaurant", nrow(geo))
+  }
+  all_categories <- sort(unique(category_norm))
+
   # Cuisine list per venue - one venue can list several (e.g. "Italian, Pizza")
   cuisines_split <- if ("cuisine" %in% names(geo)) {
     lapply(strsplit(geo$cuisine, ",\\s*"), function(x) {
@@ -148,6 +165,7 @@ export_html <- function(restaurants,
       popup     = geo$popup_html[i],
       color     = geo$pin_color[i],
       tier      = geo$tier[i],
+      category  = category_norm[i],
       price     = price_bin[i],
       n_sources = length(sources_split[[i]]),
       # I() prevents jsonlite::toJSON(auto_unbox = TRUE) from collapsing
@@ -180,7 +198,8 @@ export_html <- function(restaurants,
     leaflet::addControl(
       html     = filter_panel_html(
         tier_order, all_sources, all_cuisines,
-        price_bins = sort(unique(price_bin))
+        price_bins = sort(unique(price_bin)),
+        all_categories = all_categories
       ),
       position = "topright",
       className = "foodmap-filter-control"
@@ -298,7 +317,8 @@ popup_location <- function(geo, i) {
 #' toggles), and a min-selected-guides-matched dropdown.
 #' @noRd
 filter_panel_html <- function(tier_order, all_sources, all_cuisines = character(),
-                              price_bins = character()) {
+                              price_bins = character(),
+                              all_categories = character()) {
   esc <- htmltools::htmlEscape
 
   tier_swatch <- list(
@@ -406,6 +426,30 @@ filter_panel_html <- function(tier_order, all_sources, all_cuisines = character(
     section_html("Price", "fm-price", paste(price_rows, collapse = ""))
   } else ""
 
+  # Category section. Same checkbox shape as Source / Cuisine, with a
+  # one-emoji glyph per category so the panel labels match the pin
+  # icons on the map.
+  category_swatch <- list(
+    Restaurant = "\U0001F374",   # knife & fork
+    Cafe       = "☕",        # coffee cup
+    Bar        = "\U0001F378",    # cocktail
+    Bakery     = "\U0001F950"     # croissant
+  )
+  category_rows <- if (length(all_categories) > 0) {
+    vapply(all_categories, function(c) {
+      sprintf(
+        paste0("<label style='display:block;cursor:pointer;'>",
+               "<input type='checkbox' class='fm-category' value='%s' checked> ",
+               "%s %s</label>"),
+        esc(c), category_swatch[[c]] %||% "", esc(c)
+      )
+    }, character(1))
+  } else character(0)
+
+  category_block <- if (length(category_rows) > 0) {
+    section_html("Category", "fm-category", paste(category_rows, collapse = ""))
+  } else ""
+
   cuisine_block <- if (length(cuisine_rows) > 0) {
     section_html(
       "Cuisine", "fm-cuisine",
@@ -448,6 +492,7 @@ filter_panel_html <- function(tier_order, all_sources, all_cuisines = character(
     # Tier / Guide sections - both wrapped in collapsible .fm-section
     section_html("Tier",  "fm-tier",   paste(tier_rows, collapse = "")),
     section_html("Guide", "fm-source", paste(source_rows, collapse = "")),
+    category_block,
     # Min-guides: must appear in at least N of the *selected* guides
     "<div style='font-weight:600;margin-top:10px;margin-bottom:4px'>",
     "Min selected guides matched</div>",
@@ -486,15 +531,22 @@ function(el, x) {
     orange:     '#f39c12',
     blue:       '#3498db'
   };
-  function fmIcon(color) {
+  var fmCategoryGlyph = {
+    Restaurant: '\\u{1F374}',  // knife and fork
+    Cafe:       '\\u2615',      // coffee cup
+    Bar:        '\\u{1F378}',   // cocktail
+    Bakery:     '\\u{1F950}'    // croissant
+  };
+  function fmIcon(color, category) {
     var c = fmColors[color] || fmColors.blue;
+    var glyph = fmCategoryGlyph[category] || fmCategoryGlyph.Restaurant;
     var html =
       \"<div style='background:\" + c + \";width:26px;height:26px;\" +
       \"border-radius:50% 50% 50% 0;transform:rotate(-45deg);\" +
       \"border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);\" +
       \"display:flex;align-items:center;justify-content:center'>\" +
       \"<span style='transform:rotate(45deg);color:white;font-size:14px;\" +
-      \"line-height:1'>\\u{1F374}</span></div>\";
+      \"line-height:1'>\" + glyph + \"</span></div>\";
     return L.divIcon({
       className: 'fm-pin',
       html: html,
@@ -511,9 +563,13 @@ function(el, x) {
   }
 
   var allMarkers = markerData.map(function(d) {
-    var marker = L.marker([d.lat, d.lng], { icon: fmIcon(d.color), title: d.name });
+    var marker = L.marker([d.lat, d.lng], {
+      icon: fmIcon(d.color, d.category),
+      title: d.name
+    });
     marker.bindPopup(d.popup);
     marker._fmTier        = d.tier;
+    marker._fmCategory    = d.category || 'Restaurant';
     marker._fmName        = (d.name || '').toLowerCase();
     // Defensive: serializers sometimes collapse 1-element arrays to a
     // bare string. Promote to array so .some()/.every() work.
@@ -542,10 +598,11 @@ function(el, x) {
   var totalCuisines = document.querySelectorAll('.fm-cuisine').length;
 
   function applyFilter() {
-    var tiers    = getChecked('.fm-tier');
-    var sources  = getChecked('.fm-source');
-    var prices   = getChecked('.fm-price');
-    var cuisines = getChecked('.fm-cuisine');
+    var tiers      = getChecked('.fm-tier');
+    var sources    = getChecked('.fm-source');
+    var prices     = getChecked('.fm-price');
+    var cuisines   = getChecked('.fm-cuisine');
+    var categories = getChecked('.fm-category');
     var minN     = getMinSources();
     var searchEl = document.getElementById('fm-search');
     var query    = searchEl ? searchEl.value.trim().toLowerCase() : '';
@@ -559,9 +616,15 @@ function(el, x) {
     var cuisineSet = {};
     cuisines.forEach(function(c) { cuisineSet[c] = true; });
     var cuisineActive = totalCuisines > 0 && cuisines.length < totalCuisines;
+    var totalCategories = document.querySelectorAll('.fm-category').length;
+    var categorySet = {};
+    categories.forEach(function(c) { categorySet[c] = true; });
+    // When no category checkboxes exist (legacy panel), don't gate.
+    var categoryActive = totalCategories > 0;
 
     var visible = allMarkers.filter(function(m) {
       if (!tierSet[m._fmTier]) return false;
+      if (categoryActive && !categorySet[m._fmCategory]) return false;
       if (query && m._fmName.indexOf(query) === -1) return false;
 
       if (sources.length === 0) return false;

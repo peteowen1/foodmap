@@ -101,7 +101,11 @@ valid_sources <- function() {
 #' @noRd
 supported_cities_for_source <- function(source) {
   switch(source,
-    broadsheet          = c("sydney", "melbourne", "brisbane", "adelaide", "perth", "hobart"),
+    # Broadsheet's restaurant hotlist API (frontend-next.broadsheet.com.au)
+    # only returns data for SYD/MEL. The other AU city slugs respond with
+    # an empty 88-byte payload and the public /hotlist/{city} URL 404s.
+    # Re-add BNE/ADL/PER/HBA here if Broadsheet ever extends coverage.
+    broadsheet          = c("sydney", "melbourne"),
     broadsheet_guides   = c("sydney", "melbourne"),
     gourmet_traveller   = c("sydney", "melbourne"),
     timeout             = c("sydney", "melbourne", "san-francisco",

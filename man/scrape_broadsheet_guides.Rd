@@ -4,7 +4,7 @@
 \alias{scrape_broadsheet_guides}
 \title{Scrape Broadsheet's editorial cafe / bar / pub guides}
 \usage{
-scrape_broadsheet_guides(city = "sydney", use_cache = FALSE)
+scrape_broadsheet_guides(city = "sydney", use_cache = FALSE, discover = TRUE)
 }
 \arguments{
 \item{city}{Character. \code{"sydney"} or \code{"melbourne"}. Default
@@ -12,6 +12,13 @@ scrape_broadsheet_guides(city = "sydney", use_cache = FALSE)
 
 \item{use_cache}{Logical. Cache HTTP responses for 24h via
 \code{cached_fetch()}. Default \code{FALSE}.}
+
+\item{discover}{Logical. If \code{TRUE} (default), union the curated
+guide list with newly-published guides discovered from
+\verb{/sitemap/\{city\}/guides}. Discovered slugs are classified by
+keyword (cafe / bar / pub / etc.) so categories stay accurate.
+When \code{FALSE} only the hand-picked list runs - useful for
+reproducible test runs.}
 }
 \value{
 A tibble with the standard scraper schema. \code{category} is

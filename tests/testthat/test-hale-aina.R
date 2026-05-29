@@ -72,3 +72,39 @@ test_that("missing year falls back to current year", {
     as.integer(format(Sys.Date(), "%Y"))
   )
 })
+
+test_that("hale_aina_classify_award routes bars + cafes to the right category", {
+  # Bar paths (most specific first; cocktail/brewery/tiki/wine before bare bar)
+  expect_equal(hale_aina_classify_award("Best Cocktail Bar"),
+               c("Bar", "Cocktail Bar"))
+  expect_equal(hale_aina_classify_award("Best Brewery"),
+               c("Bar", "Brewery"))
+  expect_equal(hale_aina_classify_award("Best Tiki Bar"),
+               c("Bar", "Tiki Bar"))
+  expect_equal(hale_aina_classify_award("Best Wine Bar"),
+               c("Bar", "Wine Bar"))
+  expect_equal(hale_aina_classify_award("Best Bar"),
+               c("Bar", "Bar"))
+  # Cafe paths
+  expect_equal(hale_aina_classify_award("Best Coffee Shop"),
+               c("Cafe", "Coffee"))
+  expect_equal(hale_aina_classify_award("Best Cafe"),
+               c("Cafe", "Cafe"))
+  expect_equal(hale_aina_classify_award("Best Bakery"),
+               c("Cafe", "Bakery"))
+  expect_equal(hale_aina_classify_award("Best Brunch"),
+               c("Cafe", "Breakfast"))
+  # Restaurant catchall (the existing behaviour for all the other ~30
+  # award categories Hale Aina runs)
+  expect_equal(hale_aina_classify_award("Best Sushi"),
+               c("Restaurant", ""))
+  expect_equal(hale_aina_classify_award("Best Steak"),
+               c("Restaurant", ""))
+  # Edge cases - NA/empty award text should fall through cleanly
+  # rather than throwing, since hale_aina_to_tibble vapplys this and
+  # any throw would lose the whole tibble.
+  expect_equal(hale_aina_classify_award(NA_character_),
+               c("Restaurant", ""))
+  expect_equal(hale_aina_classify_award(""),
+               c("Restaurant", ""))
+})

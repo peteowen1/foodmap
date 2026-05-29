@@ -141,6 +141,23 @@ city_bbox <- function(city) {
     # Wimbledon). Tight enough to filter out Brighton / Oxford / Bath
     # picks that occasionally leak into "best UK restaurants" guides.
     london          = list(lat = c(51.28, 51.69), lng = c(-0.51, 0.33)),
+    # Brisbane metro + ~2h drive: Sunshine Coast north, Gold Coast
+    # south, Toowoomba west. The Gold Coast has its own slug for the
+    # food guides that distinguish them; this box happens to include
+    # both because southeast Queensland is a contiguous coastal corridor.
+    brisbane        = list(lat = c(-28.50, -26.50), lng = c(151.50, 153.80)),
+    # Adelaide metro + ~2h drive: McLaren Vale and the Fleurieu south,
+    # Barossa Valley and Clare north, Adelaide Hills east.
+    adelaide        = list(lat = c(-36.50, -34.00), lng = c(137.50, 139.50)),
+    # Perth metro + ~3h drive: Margaret River wine country south,
+    # Swan Valley east, the Pinnacles / Cervantes north. Wider lng
+    # than the eastern AU cities because the WA wheatbelt thins out
+    # quickly inland.
+    perth           = list(lat = c(-34.00, -31.00), lng = c(114.50, 117.50)),
+    # Hobart + ~2h drive: Bruny Island south, Coal River wine country
+    # east, Mt Field / Derwent Valley north. Smaller than the mainland
+    # boxes because Tasmania is geographically compact.
+    hobart          = list(lat = c(-44.00, -41.50), lng = c(146.00, 148.50)),
     NULL
   )
 }

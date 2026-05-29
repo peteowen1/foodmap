@@ -123,6 +123,33 @@ test_that("bg_parse_guide returns NULL when no ItemList block exists", {
   expect_null(bg_parse_guide(html, guide = guide, city = "sydney"))
 })
 
+test_that("bg_classify_slug routes bar/cafe keywords to correct category", {
+  # Bar paths
+  expect_equal(bg_classify_slug("pubs")$category, "Bar")
+  expect_equal(bg_classify_slug("best-cocktails")$category, "Bar")
+  expect_equal(bg_classify_slug("best-rooftop-bars")$cuisine, "Rooftop Bar")
+  expect_equal(bg_classify_slug("best-wine-bars-sydney")$cuisine, "Wine Bar")
+  expect_equal(bg_classify_slug("beer-gardens")$cuisine, "Beer Garden")
+  expect_equal(bg_classify_slug("best-hidden-bars")$cuisine, "Bar")
+  # bare "bars-cbd" should still hit Bar via catchall
+  expect_equal(bg_classify_slug("bars-cbd")$category, "Bar")
+  # Cafe paths
+  expect_equal(bg_classify_slug("best-coffee")$cuisine, "Coffee")
+  expect_equal(bg_classify_slug("best-brunch")$cuisine, "Breakfast")
+  expect_equal(bg_classify_slug("best-bakeries-melbourne")$cuisine, "Bakery")
+  expect_equal(bg_classify_slug("new-cafes")$cuisine, "Cafe")
+})
+
+test_that("bg_classify_slug returns NULL for restaurant-category guides", {
+  # We deliberately skip restaurant guides - the hotlist API covers
+  # those. The discovery step shouldn't fold best-burgers / best-pizza
+  # / best-japanese into the cafe/bar mix.
+  expect_null(bg_classify_slug("best-burgers"))
+  expect_null(bg_classify_slug("best-japanese-restaurants"))
+  expect_null(bg_classify_slug("best-mexican-restaurants"))
+  expect_null(bg_classify_slug("best-hot-cross-buns-sydney"))
+})
+
 test_that("broadsheet_guides_for_city covers sydney + melbourne but errors elsewhere", {
   syd <- broadsheet_guides_for_city("sydney")
   mel <- broadsheet_guides_for_city("melbourne")

@@ -242,15 +242,28 @@ empty_hale_aina_records <- function() {
 
 
 #' Convert parsed records to the package's standard scraper schema
+#'
+#' Maps each award category text ("Best Cocktail Bar", "Best Coffee
+#' Shop", "Best Bakery") to a standardised category column so the
+#' downstream mix-by-category analysis sees Hale Aina's bars and cafes
+#' as such instead of all collapsing into Restaurant. Cuisine inherits
+#' the same mapping where the award implies one (Coffee, Cafe, Bar).
 #' @noRd
 hale_aina_to_tibble <- function(records, url) {
+  classified <- vapply(records$category, hale_aina_classify_award,
+                       character(2),
+                       USE.NAMES = FALSE)
+  category_col <- classified[1, ]
+  cuisine_col  <- classified[2, ]
+  cuisine_col[!nzchar(cuisine_col)] <- NA_character_
+
   dplyr::transmute(
     records,
     name         = .data$name,
     suburb       = NA_character_,
     address      = NA_character_,
-    cuisine      = NA_character_,
-    category     = "Restaurant",
+    cuisine      = cuisine_col,
+    category     = category_col,
     description  = paste0(
       "Hale \u02BBAina ", .data$award_year, " ", .data$rank,
       " - ", .data$category
@@ -262,4 +275,38 @@ hale_aina_to_tibble <- function(records, url) {
     longitude    = NA_real_,
     url          = url
   )
+}
+
+
+#' Map a Hale Aina award category text to a (category, cuisine) pair
+#'
+#' Returns a length-2 character vector. The category column on the
+#' final tibble follows the standard cafe / bar / restaurant axis;
+#' cuisine is the more specific bar/cafe sub-type when the award
+#' implies one. Empty string in cuisine means "leave as NA".
+#'
+#' Award patterns observed on Hale Aina articles:
+#'   * "Cocktail Bar", "Bar", "Brewery", "Tiki Bar"     -> Bar
+#'   * "Coffee Shop", "Coffee", "Cafe"                  -> Cafe
+#'   * "Bakery", "Pastry"                               -> Cafe
+#'   * "Brunch", "Breakfast"                            -> Cafe
+#'   * everything else (sushi, steak, ramen, etc.)      -> Restaurant
+#' @noRd
+hale_aina_classify_award <- function(award) {
+  if (is.null(award) || is.na(award) || !nzchar(award)) {
+    return(c("Restaurant", ""))
+  }
+  a <- tolower(award)
+  # Bar paths (most specific first)
+  if (grepl("cocktail", a))           return(c("Bar", "Cocktail Bar"))
+  if (grepl("brewery|brewpub", a))    return(c("Bar", "Brewery"))
+  if (grepl("tiki",        a))        return(c("Bar", "Tiki Bar"))
+  if (grepl("wine bar",    a))        return(c("Bar", "Wine Bar"))
+  if (grepl("(^|\\s)bar(\\s|$)", a))  return(c("Bar", "Bar"))
+  # Cafe paths
+  if (grepl("coffee",      a))        return(c("Cafe", "Coffee"))
+  if (grepl("bakery|patisserie|pastry", a)) return(c("Cafe", "Bakery"))
+  if (grepl("brunch|breakfast", a))   return(c("Cafe", "Breakfast"))
+  if (grepl("(^|\\s)cafe(\\s|$)", a)) return(c("Cafe", "Cafe"))
+  c("Restaurant", "")
 }

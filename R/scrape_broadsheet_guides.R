@@ -24,15 +24,38 @@
 #'   `"sydney"`.
 #' @param use_cache Logical. Cache HTTP responses for 24h via
 #'   `cached_fetch()`. Default `FALSE`.
+#' @param discover Logical. If `TRUE` (default), union the curated
+#'   guide list with newly-published guides discovered from
+#'   `/sitemap/{city}/guides`. Discovered slugs are classified by
+#'   keyword (cafe / bar / pub / etc.) so categories stay accurate.
+#'   When `FALSE` only the hand-picked list runs - useful for
+#'   reproducible test runs.
 #'
 #' @return A tibble with the standard scraper schema. `category` is
 #'   set from the JSON-LD `@type` (`"Cafe"`, `"Bar"`, or `"Restaurant"`).
 #' @export
-scrape_broadsheet_guides <- function(city = "sydney", use_cache = FALSE) {
+scrape_broadsheet_guides <- function(city = "sydney", use_cache = FALSE,
+                                     discover = TRUE) {
   city <- validate_city_source(city, "broadsheet_guides")
   cli::cli_h1("Scraping Broadsheet Guides: {city}")
 
-  guides <- broadsheet_guides_for_city(city)
+  curated <- broadsheet_guides_for_city(city)
+  if (isTRUE(discover)) {
+    discovered <- bg_discover_guides_from_sitemap(city, use_cache = use_cache)
+    # Merge: curated entries win on slug collisions because they have
+    # better category/cuisine annotations.
+    curated_slugs <- vapply(curated, function(g) g$slug, character(1))
+    new <- Filter(function(g) !(g$slug %in% curated_slugs), discovered)
+    if (length(new) > 0) {
+      cli::cli_alert_info(
+        "Discovered {length(new)} new guide{?s} via sitemap: \\
+         {.val {vapply(new, function(g) g$slug, character(1))}}"
+      )
+    }
+    guides <- c(curated, new)
+  } else {
+    guides <- curated
+  }
   cli::cli_alert_info("Fetching {length(guides)} guide{?s}")
 
   rows <- purrr::map(guides, function(g) {
@@ -216,4 +239,90 @@ bg_coerce_price <- function(x) {
     return(as.integer(min(nchar(x), 4L)))
   }
   NA_integer_
+}
+
+
+#' Discover Broadsheet guide slugs from the city sitemap
+#'
+#' Fetches `/sitemap/{city}/guides`, extracts `<loc>` URLs, classifies
+#' each slug into a (category, cuisine) pair by keyword. Anything that
+#' doesn't match a known cafe/bar/pub keyword is skipped - the goal is
+#' to surface NEW cafe/bar guides without polluting with random food-
+#' category lists (best-burgers, best-pizza, etc. those are restaurant
+#' coverage already served by the hotlist API).
+#'
+#' Slug → category rules (first match wins):
+#'   * "pub"                          → Bar, Pub
+#'   * "cocktail"                     → Bar, Cocktail Bar
+#'   * "rooftop"                      → Bar, Rooftop Bar
+#'   * "wine"                         → Bar, Wine Bar
+#'   * "beer"                         → Bar, Beer Garden
+#'   * "hidden|listening|natural"     → Bar, Bar
+#'   * "(^|-)bars?(-|$)"              → Bar, Bar  (catchall)
+#'   * "coffee"                       → Cafe, Coffee
+#'   * "brunch|breakfast"             → Cafe, Breakfast
+#'   * "matcha"                       → Cafe, Matcha
+#'   * "bakery|patisserie|pastry"     → Cafe, Bakery
+#'   * "cafe"                         → Cafe, Cafe  (catchall)
+#'
+#' Slugs containing exclude tokens (cafesmart, whats-open) are filtered
+#' out because they're not best-of lists. Returns a list-of-lists in
+#' the same shape as `broadsheet_guides_for_city()`.
+#' @noRd
+bg_discover_guides_from_sitemap <- function(city, use_cache = FALSE) {
+  url <- paste0("https://www.broadsheet.com.au/sitemap/", city, "/guides")
+  xml_str <- tryCatch(
+    cached_fetch(url, use_cache = use_cache),
+    error = function(e) {
+      cli::cli_warn("Could not fetch guides sitemap: {conditionMessage(e)}")
+      return(NULL)
+    }
+  )
+  if (is.null(xml_str)) return(list())
+
+  # Extract <loc> values via regex - the sitemap is plain XML, no need
+  # to drag xml2 in for parsing.
+  locs <- stringr::str_match_all(
+    xml_str, "<loc>([^<]+)</loc>"
+  )[[1]]
+  if (nrow(locs) == 0) return(list())
+
+  slug_re <- paste0("/", city, "/guides/([^/?#]+)")
+  slugs <- stringr::str_match(locs[, 2], slug_re)[, 2]
+  slugs <- unique(slugs[!is.na(slugs) & nzchar(slugs)])
+
+  # Drop known non-spotlight slugs: charity events, holiday rotators.
+  exclude_re <- "^(cafesmart|whats-open)"
+  slugs <- slugs[!grepl(exclude_re, slugs)]
+
+  guides <- Filter(Negate(is.null), lapply(slugs, bg_classify_slug))
+  guides
+}
+
+
+#' Map a discovered slug to a (category, cuisine) pair
+#'
+#' Returns NULL when the slug doesn't carry a cafe/bar/pub keyword -
+#' restaurant-category guides are already covered by `scrape_broadsheet()`,
+#' which hits the venue-level hotlist API directly.
+#' @noRd
+bg_classify_slug <- function(slug) {
+  s <- tolower(slug)
+  # Bar rules (most specific first)
+  if (grepl("pub", s))           return(list(slug = slug, category = "Bar",  cuisine = "Pub"))
+  if (grepl("cocktail", s))      return(list(slug = slug, category = "Bar",  cuisine = "Cocktail Bar"))
+  if (grepl("rooftop", s))       return(list(slug = slug, category = "Bar",  cuisine = "Rooftop Bar"))
+  if (grepl("wine", s))          return(list(slug = slug, category = "Bar",  cuisine = "Wine Bar"))
+  if (grepl("beer", s))          return(list(slug = slug, category = "Bar",  cuisine = "Beer Garden"))
+  if (grepl("hidden|listening|natural", s))
+                                 return(list(slug = slug, category = "Bar",  cuisine = "Bar"))
+  if (grepl("(^|-)bars?(-|$)", s)) return(list(slug = slug, category = "Bar", cuisine = "Bar"))
+  # Cafe rules
+  if (grepl("coffee", s))        return(list(slug = slug, category = "Cafe", cuisine = "Coffee"))
+  if (grepl("brunch|breakfast", s)) return(list(slug = slug, category = "Cafe", cuisine = "Breakfast"))
+  if (grepl("matcha", s))        return(list(slug = slug, category = "Cafe", cuisine = "Matcha"))
+  if (grepl("baker(y|ies)|patisserie|pastry", s))
+                                 return(list(slug = slug, category = "Cafe", cuisine = "Bakery"))
+  if (grepl("cafe", s))          return(list(slug = slug, category = "Cafe", cuisine = "Cafe"))
+  NULL
 }

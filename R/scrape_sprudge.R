@@ -142,18 +142,51 @@ sprudge_search_urls <- function(query, use_cache = FALSE) {
 
 #' Decide whether a Sprudge article URL looks like a cafe spotlight
 #'
-#' Restricts to three reliable cafe-spotlight series:
-#' "Coffee Design", "Sprudge Maps", and "Build-Outs" (new-cafe
-#' openings). All three series spotlight a single venue per article.
-#' Combined with the city slug, this filters out festival, conference,
-#' lawsuit, and other unrelated coverage.
+#' Sprudge's editorial structure varies by region:
+#'
+#'   * US cities (SF/NY/LA) follow a tidy three-series pattern:
+#'     "Coffee Design", "Sprudge Maps", "Build-Outs" - each URL slug
+#'     starts with one of those series tokens. Positive-filter on the
+#'     series tokens AND the city slug.
+#'
+#'   * AU/UK cities don't use the series prefixes - cafe spotlights
+#'     use venue-name slugs ("rumble-coffee-roasters-melbourne-X",
+#'     "allpress-melbourne-X", "filter-coffee-melbourne-X"). Positive
+#'     filtering would miss most of these. Instead, take any URL
+#'     containing the city slug, then negative-filter the known
+#'     non-spotlight categories: multi-venue guides ("where-to-",
+#'     "*-guide", "guide-to-"), news ("mainstream-media", "tragedy",
+#'     "battle"), events ("expo", "sca-"), celebrity gossip
+#'     ("sweeney"), opinion pieces ("running-out", "reflection"),
+#'     and wholesale-industry stories.
 #' @noRd
 sprudge_is_spotlight <- function(urls, city) {
   if (length(urls) == 0) return(logical())
   city_slug <- sprudge_city_slug(city)
   if (is.null(city_slug)) return(rep(FALSE, length(urls)))
-  series_re <- "/(coffee-design|sprudge-maps|build-outs)[^/]*"
-  grepl(series_re, urls) & grepl(city_slug, urls, fixed = TRUE)
+
+  city_in_url <- grepl(city_slug, urls, fixed = TRUE)
+
+  if (city %in% c("san-francisco", "new-york", "los-angeles")) {
+    series_re <- "/(coffee-design|sprudge-maps|build-outs)[^/]*"
+    return(grepl(series_re, urls) & city_in_url)
+  }
+
+  # AU / UK path: take everything in-city, exclude obvious non-venue articles.
+  not_spotlight_re <- paste0(
+    "where-to-(drink|go|find)|",     # multi-venue travel articles
+    "-coffee-guide|coffee-guide-|",  # city-wide coffee guides
+    "guide-to-|",                    # multi-venue guides
+    "mainstream-media|",             # industry/press meta
+    "reflection|tragedy|",           # opinion / news
+    "battle|expo|sca-|",             # events / competitions
+    "running-out|fantasies|",        # opinion pieces / clickbait
+    "wholesale|",                    # industry trade stories
+    "sweeney|",                      # celebrity gossip
+    "-hours-|caffeinated-hours|",    # "24 hours in" travelogues
+    "best-(cafes|coffees|coffee-shops)" # ranked listicles - we want individual spotlights
+  )
+  city_in_url & !grepl(not_spotlight_re, urls)
 }
 
 
@@ -246,13 +279,18 @@ sprudge_clean_name <- function(title, city = "san-francisco") {
   # Drop trailing " | Sprudge Coffee" suffix
   title <- stringr::str_replace(title, "\\s*\\|\\s*Sprudge\\s+Coffee\\s*$", "")
 
-  # Drop leading series prefix. The Build-Outs series uses several
-  # variants ("Of Summer", "Of Fall", "Of Coffee", just "Build-Outs").
+  # Drop leading series prefix. Sprudge uses several series for
+  # spotlights: "Coffee Design" + "Sprudge Maps [Spotlight]" +
+  # "Build-Outs [Of X]" are the long-running US patterns; "Nice Package"
+  # is the coffee-packaging-focused series that turns up across regions
+  # including AU. Build-Outs variants include "Of Summer", "Of Fall",
+  # "Of Coffee", etc.
   title <- stringr::str_replace(
     title,
     paste0(
       "^(Coffee Design|Sprudge Maps Spotlight|Sprudge Maps|",
-      "Build-Outs(?:\\s+Of\\s+\\w+)?|Build-Outs)[:\\s-]+"
+      "Build-Outs(?:\\s+Of\\s+\\w+)?|Build-Outs|",
+      "Nice Package)[:\\s-]+"
     ),
     ""
   )
@@ -273,6 +311,11 @@ sprudge_clean_name <- function(title, city = "san-francisco") {
                                 paste0(",\\s*", city_re, ".*$"), "")
   title <- stringr::str_replace(title,
                                 paste0("\\s*\\(", city_re, "\\).*$"), "")
+  # Also strip a bare trailing city name (no preposition). AU articles
+  # often title themselves "Rumble Coffee Roasters Melbourne" with no
+  # "in"/"of"/"at" before the city.
+  title <- stringr::str_replace(title,
+                                paste0("(?i)\\s+", city_re, "\\s*$"), "")
 
   # Build-Outs articles often title themselves "Cafe's Third Location"
   # or "Cafe's New Location" -- the geocoder needs the cafe name only.

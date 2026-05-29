@@ -103,7 +103,7 @@ cached_scrape <- function(key, expr, cache_dir = "cache/parsed",
   on.exit()
 
   manifest <- build_parsed_manifest(urls_touched, html_cache_dir)
-  manifest$code_mtime <- newest_code_mtime()
+  manifest$code_mtime <- source_file_mtime(key)
 
   dir.create(cache_dir, showWarnings = FALSE, recursive = TRUE)
   saveRDS(result, rds_path)
@@ -183,14 +183,18 @@ parsed_cache_valid <- function(rds_path, manifest_path, ttl_hours) {
   )
   if (is.null(manifest)) return(FALSE)
 
-  # Invalidate when any R/*.R file has been touched since the cache
-  # was written. Catches scraper-logic changes that mtime-based URL
-  # invalidation can't see - e.g. adding new sections to a multi-pull
-  # scraper while the previously-tracked URLs all stay unchanged.
-  # Older caches without a code_mtime field skip this check (treat as
-  # valid pre-feature behaviour).
+  # Invalidate when the source-specific scraper file (e.g.
+  # R/scrape_broadsheet_guides.R) has been touched since the cache was
+  # written. Catches scraper-logic changes that mtime-based URL
+  # invalidation can't see - adding new sections to a multi-pull
+  # scraper, fixing a parse bug, etc. - while leaving caches for
+  # OTHER unrelated sources intact across an edit.
+  #
+  # The key encodes the source - "{source}_{city}" - so we derive the
+  # path. Older caches without a code_mtime field skip this check
+  # (treat as valid pre-feature behaviour).
   if (!is.null(manifest$code_mtime)) {
-    cur_code <- newest_code_mtime()
+    cur_code <- source_file_mtime_from_manifest_path(manifest_path)
     if (!is.na(cur_code) && !is.na(manifest$code_mtime) &&
         cur_code > manifest$code_mtime) {
       return(FALSE)
@@ -218,18 +222,37 @@ parsed_cache_valid <- function(rds_path, manifest_path, ttl_hours) {
 }
 
 
-#' Newest mtime across all R/*.R files as an ISO-8601 string
+#' Map a cached_scrape() key to the source name + scraper file mtime
 #'
-#' Used as a coarse "package version" fingerprint in parsed-cache
-#' manifests so any source-code change (added section, fixed parse
-#' bug, schema tweak) invalidates the parsed caches even when the
-#' tracked HTML URLs are unchanged. Returns NA when no R files are
-#' found (running outside a package checkout) - the validator treats
-#' that as "skip the check".
+#' The key convention is `"{source}_{city}"` where `{source}` may contain
+#' underscores (`concrete_playground`, `good_food_guide`,
+#' `broadsheet_guides`) and `{city}` uses hyphens (`san-francisco`,
+#' `new-york`). The source is therefore "everything before the last
+#' underscore". The scraper file follows `R/scrape_{source}.R`.
+#'
+#' Returns the file's mtime as an ISO-8601 string, or `NA_character_`
+#' when the file doesn't exist or the key can't be split - the validator
+#' treats either case as "skip the check" (matches the pre-feature
+#' behaviour for older caches).
 #' @noRd
-newest_code_mtime <- function(r_dir = "R") {
-  if (!dir.exists(r_dir)) return(NA_character_)
-  files <- list.files(r_dir, pattern = "\\.R$", full.names = TRUE)
-  if (length(files) == 0) return(NA_character_)
-  format(max(file.mtime(files)), "%Y-%m-%dT%H:%M:%S")
+source_file_mtime <- function(key, r_dir = "R") {
+  m <- regmatches(key, regexec("^(.+)_([^_]+)$", key))[[1]]
+  if (length(m) < 3) return(NA_character_)
+  source_name <- m[2]
+  path <- file.path(r_dir, paste0("scrape_", source_name, ".R"))
+  if (!file.exists(path)) return(NA_character_)
+  format(file.mtime(path), "%Y-%m-%dT%H:%M:%S")
+}
+
+
+#' Recover the cache key from a manifest path + delegate to
+#' source_file_mtime()
+#'
+#' Used by the validator. The manifest path is
+#' `{cache_dir}/{key}.manifest.json`, so the key is the basename minus
+#' the `.manifest.json` suffix.
+#' @noRd
+source_file_mtime_from_manifest_path <- function(manifest_path, r_dir = "R") {
+  key <- sub("\\.manifest\\.json$", "", basename(manifest_path))
+  source_file_mtime(key, r_dir = r_dir)
 }

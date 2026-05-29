@@ -115,6 +115,49 @@ test_that("cache_track_start/record/stop is a one-shot bucket", {
   expect_equal(length(cache_track_stop()), 0L)
 })
 
+test_that("source_file_mtime parses {source}_{city} keys and finds the scraper file", {
+  skip_if_not_installed("withr")
+  r_dir <- withr::local_tempdir()
+  # Three test files - varying source-name shapes.
+  for (s in c("broadsheet", "good_food_guide", "broadsheet_guides", "7x7")) {
+    writeLines("# stub", file.path(r_dir, paste0("scrape_", s, ".R")))
+  }
+  expect_match(source_file_mtime("broadsheet_sydney", r_dir = r_dir),
+               "^\\d{4}-\\d{2}-\\d{2}T")
+  # Multi-underscore source name should still resolve to the longest prefix
+  # (the source is everything before the LAST underscore).
+  expect_match(source_file_mtime("good_food_guide_sydney", r_dir = r_dir),
+               "^\\d{4}-\\d{2}-\\d{2}T")
+  # broadsheet_guides_sydney must NOT collapse to broadsheet_sydney.
+  expect_match(source_file_mtime("broadsheet_guides_sydney", r_dir = r_dir),
+               "^\\d{4}-\\d{2}-\\d{2}T")
+  # Source name with a digit + city with hyphens.
+  expect_match(source_file_mtime("7x7_san-francisco", r_dir = r_dir),
+               "^\\d{4}-\\d{2}-\\d{2}T")
+  # Missing scraper file -> NA.
+  expect_true(is.na(source_file_mtime("nonexistent_source_sydney",
+                                      r_dir = r_dir)))
+  # Malformed key (no underscore) -> NA.
+  expect_true(is.na(source_file_mtime("badkey", r_dir = r_dir)))
+})
+
+test_that("source_file_mtime invalidation only fires on the source's own file", {
+  # The whole point of the per-source split: editing broadsheet's
+  # scraper should NOT invalidate concrete_playground's parsed cache.
+  skip_if_not_installed("withr")
+  r_dir <- withr::local_tempdir()
+  writeLines("# v1", file.path(r_dir, "scrape_broadsheet.R"))
+  writeLines("# v1", file.path(r_dir, "scrape_concrete_playground.R"))
+  mt_bs_before  <- source_file_mtime("broadsheet_sydney", r_dir = r_dir)
+  mt_cp_before  <- source_file_mtime("concrete_playground_sydney", r_dir = r_dir)
+  # Bump only broadsheet's mtime.
+  Sys.setFileTime(file.path(r_dir, "scrape_broadsheet.R"), Sys.time() + 5)
+  mt_bs_after  <- source_file_mtime("broadsheet_sydney", r_dir = r_dir)
+  mt_cp_after  <- source_file_mtime("concrete_playground_sydney", r_dir = r_dir)
+  expect_true(mt_bs_after > mt_bs_before)
+  expect_equal(mt_cp_after, mt_cp_before)
+})
+
 test_that("build_parsed_manifest with empty URL list still serializes valid JSON", {
   skip_if_not_installed("withr")
   td <- withr::local_tempdir()
