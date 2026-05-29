@@ -4,7 +4,12 @@
 \alias{scrape_all_sources}
 \title{Scrape restaurants from all available sources for a city}
 \usage{
-scrape_all_sources(city = "sydney", use_cache = FALSE, use_parsed_cache = TRUE)
+scrape_all_sources(
+  city = "sydney",
+  use_cache = FALSE,
+  use_parsed_cache = TRUE,
+  skip_sources = character()
+)
 }
 \arguments{
 \item{city}{Character. City to scrape. Default \code{"sydney"}.}
@@ -14,6 +19,12 @@ scrape_all_sources(city = "sydney", use_cache = FALSE, use_parsed_cache = TRUE)
 \item{use_parsed_cache}{Logical. Cache parsed tibbles per (source,
 city). Auto-invalidates when underlying HTML cache files change.
 Defaults to \code{TRUE}; only effective when \code{use_cache = TRUE}.}
+
+\item{skip_sources}{Character vector of source names to exclude
+from this run. Useful when a specific scraper is known to hang
+or crash on a given city (e.g. Michelin's NY guide aborts the
+R process mid-parse) and you want partial-pipeline results from
+the other sources. Defaults to \code{character(0)} (no skips).}
 }
 \value{
 A tibble with all standard columns plus a \code{source} column

@@ -90,18 +90,24 @@ scrape_dispatch <- function(source, city, use_chromote, use_cache) {
 #' @param use_parsed_cache Logical. Cache parsed tibbles per (source,
 #'   city). Auto-invalidates when underlying HTML cache files change.
 #'   Defaults to `TRUE`; only effective when `use_cache = TRUE`.
+#' @param skip_sources Character vector of source names to exclude
+#'   from this run. Useful when a specific scraper is known to hang
+#'   or crash on a given city (e.g. Michelin's NY guide aborts the
+#'   R process mid-parse) and you want partial-pipeline results from
+#'   the other sources. Defaults to `character(0)` (no skips).
 #'
 #' @return A tibble with all standard columns plus a `source` column
 #'   identifying which guide each venue came from.
 #' @export
 scrape_all_sources <- function(city = "sydney", use_cache = FALSE,
-                               use_parsed_cache = TRUE) {
+                               use_parsed_cache = TRUE,
+                               skip_sources = character()) {
   city <- tolower(city)
   all_sources <- valid_sources()
 
-  # Find which sources support this city
+  # Find which sources support this city, minus any explicitly skipped.
   supported <- purrr::keep(all_sources, function(src) {
-    city %in% supported_cities_for_source(src)
+    city %in% supported_cities_for_source(src) && !src %in% skip_sources
   })
 
   if (length(supported) == 0) {
