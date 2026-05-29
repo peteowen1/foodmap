@@ -23,7 +23,8 @@ all <- scrape_all_sources("honolulu", use_cache = TRUE) |>
   apply_manual_excludes(city = "honolulu") |>
   geocode_restaurants(country = "US", city = "honolulu") |>
   infer_missing_price() |>
-  harmonize_sources()
+  harmonize_sources() |>
+  assert_venue_count(city = "honolulu")
 
 dir.create("output", showWarnings = FALSE)
 export_csv(all, "output/honolulu_all_sources.csv")

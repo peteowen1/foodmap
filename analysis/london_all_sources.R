@@ -22,7 +22,8 @@ all <- scrape_all_sources("london", use_cache = TRUE) |>
   apply_manual_excludes(city = "london") |>
   geocode_restaurants(country = "GB", city = "london") |>
   infer_missing_price() |>
-  harmonize_sources()
+  harmonize_sources() |>
+  assert_venue_count(city = "london")
 
 dir.create("output", showWarnings = FALSE)
 export_csv(all, "output/london_all_sources.csv")

@@ -12,7 +12,8 @@ all <- scrape_all_sources("melbourne", use_cache = TRUE) |>
   apply_manual_excludes(city = "melbourne") |>
   geocode_restaurants(country = "AU", city = "melbourne") |>
   infer_missing_price() |>
-  harmonize_sources()
+  harmonize_sources() |>
+  assert_venue_count(city = "melbourne")
 # To force re-geocoding (e.g. after suspecting stale coords):
 #   geocode_restaurants(force_refresh = TRUE)
 

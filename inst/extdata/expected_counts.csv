@@ -1,0 +1,12 @@
+city,expected_min,note
+sydney,700,"Post-Broadsheet-guides baseline May 2026 ~786; floor at 700 catches major source breakage"
+melbourne,700,"Post-Broadsheet-guides baseline May 2026 ~817; floor at 700"
+honolulu,150,"May 2026 ~175 with 5 sources; floor accounts for small-source-set sensitivity"
+san-francisco,400,"May 2026 ~502 with Michelin"
+new-york,500,"May 2026 ~594 with Michelin"
+los-angeles,300,"May 2026 ~374 with Michelin + Sprudge LA"
+london,500,"May 2026 ~588 with Michelin + Sprudge London + Eater expansion"
+brisbane,80,"AGFG QLD awards floor (~108 baseline May 2026)"
+adelaide,40,"AGFG SA awards floor (~56 baseline)"
+perth,30,"AGFG WA awards floor (~41 baseline)"
+hobart,20,"AGFG TAS awards floor (~27 baseline)"

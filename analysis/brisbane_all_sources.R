@@ -11,7 +11,8 @@ all <- scrape_all_sources("brisbane", use_cache = TRUE) |>
   apply_manual_excludes(city = "brisbane") |>
   geocode_restaurants(country = "AU", city = "brisbane") |>
   infer_missing_price() |>
-  harmonize_sources()
+  harmonize_sources() |>
+  assert_venue_count(city = "brisbane")
 
 dir.create("output", showWarnings = FALSE)
 export_csv(all, "output/brisbane_all_sources.csv")

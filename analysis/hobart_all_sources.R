@@ -10,7 +10,8 @@ all <- scrape_all_sources("hobart", use_cache = TRUE) |>
   apply_manual_excludes(city = "hobart") |>
   geocode_restaurants(country = "AU", city = "hobart") |>
   infer_missing_price() |>
-  harmonize_sources()
+  harmonize_sources() |>
+  assert_venue_count(city = "hobart")
 
 dir.create("output", showWarnings = FALSE)
 export_csv(all, "output/hobart_all_sources.csv")

@@ -10,7 +10,8 @@ all <- scrape_all_sources("adelaide", use_cache = TRUE) |>
   apply_manual_excludes(city = "adelaide") |>
   geocode_restaurants(country = "AU", city = "adelaide") |>
   infer_missing_price() |>
-  harmonize_sources()
+  harmonize_sources() |>
+  assert_venue_count(city = "adelaide")
 
 dir.create("output", showWarnings = FALSE)
 export_csv(all, "output/adelaide_all_sources.csv")

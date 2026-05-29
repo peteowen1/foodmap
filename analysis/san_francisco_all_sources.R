@@ -13,7 +13,8 @@ all <- scrape_all_sources("san-francisco", use_cache = TRUE) |>
   apply_manual_excludes(city = "san-francisco") |>
   geocode_restaurants(country = "US", city = "san-francisco") |>
   infer_missing_price() |>
-  harmonize_sources()
+  harmonize_sources() |>
+  assert_venue_count(city = "san-francisco")
 
 dir.create("output", showWarnings = FALSE)
 export_csv(all, "output/san_francisco_all_sources.csv")

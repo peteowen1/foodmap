@@ -9,7 +9,8 @@ all <- scrape_all_sources("perth", use_cache = TRUE) |>
   apply_manual_excludes(city = "perth") |>
   geocode_restaurants(country = "AU", city = "perth") |>
   infer_missing_price() |>
-  harmonize_sources()
+  harmonize_sources() |>
+  assert_venue_count(city = "perth")
 
 dir.create("output", showWarnings = FALSE)
 export_csv(all, "output/perth_all_sources.csv")
