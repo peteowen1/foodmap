@@ -89,7 +89,8 @@ CUISINE_NAMES <- c(
 #' All valid scraper source names
 #' @noRd
 valid_sources <- function() {
-  c("broadsheet", "gourmet_traveller", "timeout", "urban_list", "agfg",
+  c("broadsheet", "broadsheet_guides",
+    "gourmet_traveller", "timeout", "urban_list", "agfg",
     "good_food_guide", "gfg_awards", "concrete_playground",
     "infatuation", "eater", "7x7", "cn_traveler", "james_beard",
     "michelin", "sprudge", "thrillist", "honolulu_magazine",
@@ -101,6 +102,7 @@ valid_sources <- function() {
 supported_cities_for_source <- function(source) {
   switch(source,
     broadsheet          = c("sydney", "melbourne", "brisbane", "adelaide", "perth", "hobart"),
+    broadsheet_guides   = c("sydney", "melbourne"),
     gourmet_traveller   = c("sydney", "melbourne"),
     timeout             = c("sydney", "melbourne", "san-francisco",
                             "new-york", "los-angeles", "london"),

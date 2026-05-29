@@ -11,8 +11,9 @@ scrape_sprudge(
 )
 }
 \arguments{
-\item{city}{Character. Currently only \code{"san-francisco"}. Default
-\code{"san-francisco"}.}
+\item{city}{Character. Supported cities are \code{"san-francisco"},
+\code{"new-york"}, \code{"los-angeles"}, \code{"london"}, \code{"sydney"}, and
+\code{"melbourne"}. Default \code{"san-francisco"}.}
 
 \item{extra_guides}{Character vector of extra Sprudge article URLs
 to harvest on top of the search-driven defaults. Useful for

@@ -56,6 +56,7 @@ scrape_dispatch <- function(source, city, use_chromote, use_cache) {
   switch(source,
     broadsheet        = scrape_broadsheet(city, use_chromote = use_chromote,
                                           use_cache = use_cache),
+    broadsheet_guides = scrape_broadsheet_guides(city, use_cache = use_cache),
     gourmet_traveller = scrape_gourmet_traveller(city, use_cache = use_cache),
     timeout           = scrape_timeout(city, use_cache = use_cache),
     urban_list        = scrape_urban_list(city, use_cache = use_cache),
