@@ -66,6 +66,14 @@ scrape_michelin <- function(city = "san-francisco",
   )
 
   if (length(detail_urls) == 0) {
+    snap <- michelin_load_snapshot(city)
+    if (!is.null(snap) && nrow(snap) > 0) {
+      cli::cli_warn(c(
+        "Michelin live scrape found 0 listing URLs (likely a WAF/IP block).",
+        "i" = "Falling back to committed snapshot: {nrow(snap)} venue{?s}."
+      ))
+      return(snap)
+    }
     cli::cli_abort("No restaurant URLs found on Michelin listing pages.")
   }
   cli::cli_alert_info(
@@ -112,6 +120,14 @@ scrape_michelin <- function(city = "san-francisco",
   }
   rows <- purrr::compact(raw)
   if (length(rows) == 0) {
+    snap <- michelin_load_snapshot(city)
+    if (!is.null(snap) && nrow(snap) > 0) {
+      cli::cli_warn(c(
+        "Michelin returned listing URLs but every detail page failed (WAF).",
+        "i" = "Falling back to committed snapshot: {nrow(snap)} venue{?s}."
+      ))
+      return(snap)
+    }
     cli::cli_abort("Could not extract any venues from the Michelin Guide.")
   }
 
@@ -156,6 +172,30 @@ michelin_url_prefix <- function(city) {
     london          = "/gb/en/greater-london/",
     cli::cli_abort("No Michelin URL prefix configured for {.val {city}}")
   )
+}
+
+
+#' Load the committed Michelin snapshot for a city, or NULL
+#'
+#' Michelin's AWS WAF serves a 404/bot-challenge to datacenter IP ranges
+#' (GitHub Actions), so a live scrape returns zero venues in CI even though
+#' the scraper is correct (200 + full results from a residential IP). These
+#' RDS snapshots - refreshed locally via
+#' `analysis/refresh_michelin_snapshot.R` - are the CI fallback. Prefers a
+#' working-directory copy (live dev / CI checkout), then the installed
+#' package copy, mirroring `assert_venue_count()`'s lookup.
+#' @noRd
+michelin_load_snapshot <- function(city) {
+  rel <- file.path("inst", "extdata", "michelin_snapshots",
+                   paste0(city, ".rds"))
+  path <- if (file.exists(rel)) {
+    rel
+  } else {
+    system.file("extdata", "michelin_snapshots", paste0(city, ".rds"),
+                package = "foodmap")
+  }
+  if (!nzchar(path) || !file.exists(path)) return(NULL)
+  tryCatch(readRDS(path), error = function(e) NULL)
 }
 
 
