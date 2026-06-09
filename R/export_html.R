@@ -431,7 +431,7 @@ filter_panel_html <- function(tier_order, all_sources, all_cuisines = character(
   # icons on the map.
   category_swatch <- list(
     Restaurant = "\U0001F374",   # knife & fork
-    Cafe       = "☕",        # coffee cup
+    Cafe       = "\U00002615",   # coffee cup
     Bar        = "\U0001F378",    # cocktail
     Bakery     = "\U0001F950"     # croissant
   )
