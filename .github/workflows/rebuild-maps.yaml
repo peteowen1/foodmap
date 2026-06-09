@@ -28,12 +28,13 @@ jobs:
     timeout-minutes: 90
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # chromote drives a headless Chromium for Good Food Guide + Broadsheet
       # fallback. The browser-actions/setup-chrome action handles install.
       - name: Install Chrome (chromote dep)
-        uses: browser-actions/setup-chrome@v1
+        id: setup-chrome
+        uses: browser-actions/setup-chrome@v2
 
       - uses: r-lib/actions/setup-r@v2
         with:
@@ -56,7 +57,7 @@ jobs:
       # version-stamp the key with the workflow file's hash so a workflow
       # edit forces a cache invalidation if we change the pipeline shape.
       - name: Restore caches
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: cache
           key: foodmap-caches-${{ hashFiles('.github/workflows/rebuild-maps.yaml') }}-${{ github.run_id }}
@@ -64,6 +65,11 @@ jobs:
             foodmap-caches-${{ hashFiles('.github/workflows/rebuild-maps.yaml') }}-
 
       - name: Run all city pipelines
+        # chromote locates Chrome via CHROMOTE_CHROME. setup-chrome@v2 moved
+        # the install path, so wire the action's output explicitly rather
+        # than rely on PATH auto-detection.
+        env:
+          CHROMOTE_CHROME: ${{ steps.setup-chrome.outputs.chrome-path }}
         run: |
           set -e
           # continue-on-failure per city - a single broken source shouldn't
@@ -90,7 +96,7 @@ jobs:
 
       - name: Open PR if maps changed
         if: steps.changes.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v8
         with:
           branch: bot/weekly-refresh
           base: main
