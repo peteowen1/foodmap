@@ -30,6 +30,7 @@ Imports:
 Suggests:
     callr,
     chromote,
+    devtools,
     htmltools,
     htmlwidgets,
     leaflet,
