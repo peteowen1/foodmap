@@ -155,6 +155,16 @@ export_kml(deduped, "output/sydney_all_sources.kml")
 - `debug/` — debugging/troubleshooting scripts (not part of the package)
 - `cache/` — cached HTTP responses (gitignored, auto-created)
 
+## Committed CI fixtures (`inst/extdata/`)
+
+`inst/extdata/*` is **deliberately tracked** (see `.gitignore`'s `!inst/extdata/*.csv`) — a narrow exception to the "bulk data stays out of git" rule. These are small, deterministic baselines CI loads when its environment can't reproduce local coverage:
+
+- `expected_counts.csv` — per-city venue-count floors for `assert_venue_count()`.
+- `geocodes_seed.csv` — Google-quality coordinate baseline. CI starts on a cold cache + lower-yield Nominatim, so without it sydney/honolulu drop below floor. `geocode_cache_apply()` layers the live run cache over it.
+- `michelin_snapshots/*.rds` — Michelin results captured locally, used when Michelin's WAF blocks CI's datacenter IP.
+
+Refresh `geocodes_seed.csv` by copying `cache/geocodes.csv` after a local run; refresh the Michelin snapshots via `analysis/refresh_michelin_snapshot.R`. Bulk analytics data still belongs in Releases, not git.
+
 ## Conventions
 
 - All user-facing messages use `cli` (`cli_abort`, `cli_warn`, `cli_alert_*`)

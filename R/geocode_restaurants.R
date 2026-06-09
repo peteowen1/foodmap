@@ -205,16 +205,30 @@ geocode_restaurants <- function(restaurants,
 #' @noRd
 geocode_cache_apply <- function(restaurants, cache_path, country = NULL,
                                 city = NULL) {
-  cached <- tryCatch(
-    utils::read.csv(cache_path, stringsAsFactors = FALSE,
-                    # Don't conflate "" with NA - we use empty
-                    # strings as the "tried-but-empty" sentinel for
-                    # neighborhood, distinct from "never tried" (NA).
-                    na.strings = "NA"),
-    error = function(e) NULL
-  )
+  read_geocodes <- function(p) {
+    if (is.null(p) || !nzchar(p) || !file.exists(p)) return(NULL)
+    tryCatch(
+      utils::read.csv(p, stringsAsFactors = FALSE,
+                      # Don't conflate "" with NA - we use empty
+                      # strings as the "tried-but-empty" sentinel for
+                      # neighborhood, distinct from "never tried" (NA).
+                      na.strings = "NA"),
+      error = function(e) NULL
+    )
+  }
+  # Live run cache layered over the committed baseline seed. CI starts with
+  # a cold cache and lower-yield Nominatim geocoding, so without the seed
+  # (Google-quality coords captured from local runs) cities like sydney and
+  # honolulu drop below their assert_venue_count() floors. Live entries are
+  # listed first so they win the (name, suburb) de-dup below.
+  seed_path <- if (file.exists(file.path("inst", "extdata", "geocodes_seed.csv"))) {
+    file.path("inst", "extdata", "geocodes_seed.csv")
+  } else {
+    system.file("extdata", "geocodes_seed.csv", package = "foodmap")
+  }
+  cached <- dplyr::bind_rows(read_geocodes(cache_path), read_geocodes(seed_path))
   required <- c("name", "suburb", "latitude", "longitude")
-  if (is.null(cached) || !all(required %in% names(cached))) {
+  if (!nrow(cached) || !all(required %in% names(cached))) {
     return(restaurants)
   }
   cache_cols <- intersect(
@@ -273,7 +287,7 @@ geocode_cache_apply <- function(restaurants, cache_path, country = NULL,
   reused <- sum(!is.na(restaurants$latitude)) - before
   if (reused > 0) {
     cli::cli_alert_info(
-      "Reused {reused} cached coordinate{?s} from {.file {cache_path}}"
+      "Reused {reused} cached coordinate{?s} (run cache + committed seed)"
     )
   }
   restaurants
