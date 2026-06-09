@@ -53,16 +53,22 @@ jobs:
             any::withr
 
       # Restore previous run's geocode + HTTP caches. The cache/ directory
-      # has the HTML cache (lots of small files) and the geocode CSV. We
-      # version-stamp the key with the workflow file's hash so a workflow
-      # edit forces a cache invalidation if we change the pipeline shape.
+      # has the HTML cache (lots of small files) and the geocode CSV
+      # (accumulated, hard-won coordinates).
+      #
+      # The key is a manual version stamp, NOT a hash of this file: a
+      # coordinate doesn't become stale because we bumped an action version
+      # or edited the city loop, and losing the geocode cache forces a slow,
+      # lower-yield Nominatim re-geocode that can drop cities below their
+      # assert_venue_count() floor. Bump v1 -> v2 only to deliberately
+      # invalidate the cache.
       - name: Restore caches
         uses: actions/cache@v5
         with:
           path: cache
-          key: foodmap-caches-${{ hashFiles('.github/workflows/rebuild-maps.yaml') }}-${{ github.run_id }}
+          key: foodmap-caches-v1-${{ github.run_id }}
           restore-keys: |
-            foodmap-caches-${{ hashFiles('.github/workflows/rebuild-maps.yaml') }}-
+            foodmap-caches-v1-
 
       - name: Run all city pipelines
         # chromote locates Chrome via CHROMOTE_CHROME. setup-chrome@v2 moved
