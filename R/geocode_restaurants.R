@@ -287,7 +287,7 @@ geocode_cache_apply <- function(restaurants, cache_path, country = NULL,
   reused <- sum(!is.na(restaurants$latitude)) - before
   if (reused > 0) {
     cli::cli_alert_info(
-      "Reused {reused} cached coordinate{?s} from {.file {cache_path}}"
+      "Reused {reused} cached coordinate{?s} (run cache + committed seed)"
     )
   }
   restaurants
