@@ -58,6 +58,18 @@ export_kml(deduped, path)          → .kml with folders per source + "multiple"
 | Sprudge (coffee) | `scrape_sprudge()` | sf, ny, la, london, syd, mel | WordPress search → article spotlights (Coffee Design / Sprudge Maps / Build-Outs) |
 | Eater | `scrape_eater()` | sf, ny, la, london | Inline JSON in map pages. Per-city guide slugs include best-bakeries, best-coffee, best-cocktail-bars where Eater publishes them. |
 | Michelin Guide | `scrape_michelin()` | sf, ny, la, london | JSON-LD detail pages, parsed in callr worker batches (≤15 URLs/batch) to isolate libxml2 segfaults from the parent R process |
+| Broadsheet Guides | `scrape_broadsheet_guides()` | syd, mel, bri, adl, per, hob | `/{city}/guides/{slug}` editorial cafe/bar/pub lists — schema.org `ItemList` JSON-LD |
+| Good Food Guide Awards | `scrape_gfg_awards()` | syd (NSW/ACT) | Curated SMH GFG 2026 hatted-restaurants list from the awards article (hat counts only) |
+| Infatuation | `scrape_infatuation()` | sf, ny, la, london | City editorial guides — JSON-LD `ItemList` with full venue details (one fetch per guide) |
+| Resy | `scrape_resy()` | ny, la (+ historical) | Monthly Hit List — `article.teaser2` blocks with `data-lat`/`data-lng` |
+| Thrillist | `scrape_thrillist()` | per city | "Best Restaurants in CITY" — inline `Restaurant` JSON-LD with GeoCoordinates |
+| Conde Nast Traveler | `scrape_cn_traveler()` | per city | "Best Restaurants" gallery articles — `<h3>` venue names, geocoder resolves location |
+| Bon Appétit | `scrape_bonappetit()` | US-wide | Annual "Best New Restaurants in America" — `<strong>` venue/city blocks |
+| World's 50 Best | `scrape_worlds50best()` | global | Ranked list (1-100) cards + `Restaurant` JSON-LD detail pages |
+| James Beard Awards | `scrape_james_beard()` | US by city | Hand-curated embedded tribble of JBA winners/finalists (site is client-rendered) |
+| 7x7 | `scrape_7x7()` | sf | Annual "Big Eat"/"Big Cheap" SF dish lists — numbered-paragraph entries |
+| Hale 'Aina Awards | `scrape_hale_aina()` | honolulu | Honolulu Magazine reader-voted awards — Gold/Silver/Bronze/Finalist picks |
+| HONOLULU Magazine | `scrape_honolulu_magazine()` | honolulu | Editorial "best of" roundups (two staple articles) |
 
 All scrapers are dispatched via `scrape_restaurants(city, source)`.
 
