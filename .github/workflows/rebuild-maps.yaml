@@ -28,7 +28,7 @@ jobs:
     timeout-minutes: 90
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       # chromote drives a headless Chromium for Good Food Guide + Broadsheet
       # fallback. The browser-actions/setup-chrome action handles install.
