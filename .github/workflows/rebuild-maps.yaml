@@ -63,7 +63,7 @@ jobs:
       # assert_venue_count() floor. Bump v1 -> v2 only to deliberately
       # invalidate the cache.
       - name: Restore caches
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: cache
           key: foodmap-caches-v1-${{ github.run_id }}
