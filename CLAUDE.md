@@ -12,7 +12,7 @@ An R package that scrapes restaurant guides (Broadsheet, Gourmet Traveller, Time
 devtools::load_all()              # Load package for interactive use (Ctrl+Shift+L in RStudio)
 devtools::document()              # Regenerate NAMESPACE and docs from roxygen2 comments
 devtools::check()                 # Full R CMD check
-devtools::test()                  # Run testthat test suite (169 tests)
+devtools::test()                  # Run testthat test suite
 ```
 
 CI: GitHub Actions runs `R CMD check` on push/PR to `main`.
