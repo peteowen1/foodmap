@@ -62,8 +62,14 @@ jobs:
       # lower-yield Nominatim re-geocode that can drop cities below their
       # assert_venue_count() floor. Bump v1 -> v2 only to deliberately
       # invalidate the cache.
+      #
+      # Restore and save are separate steps on purpose. The combined
+      # actions/cache step only saves in its post step when the whole job
+      # succeeded (post-if: success()), and the job fails whenever any city
+      # fails, so a partly-failed run would throw away every geocode it
+      # gathered. The explicit save step below runs regardless.
       - name: Restore caches
-        uses: actions/cache@v6
+        uses: actions/cache/restore@v6
         with:
           path: cache
           key: foodmap-caches-v1-${{ github.run_id }}
@@ -99,6 +105,18 @@ jobs:
           done
           failed="${failed# }"
           echo "failed=${failed}" >> "$GITHUB_OUTPUT"
+
+      # Save straight after the city loop, even when a city failed, so the
+      # geocodes from successful lookups carry forward. Skipped if the city
+      # step never ran (an earlier setup step failed), so a missing or
+      # stale cache/ is never saved as the newest entry. The key is unique
+      # per run, and the restore-keys prefix above picks the newest entry.
+      - name: Save caches
+        if: ${{ !cancelled() && steps.cities.outcome != 'skipped' }}
+        uses: actions/cache/save@v6
+        with:
+          path: cache
+          key: foodmap-caches-v1-${{ github.run_id }}
 
       - name: Detect doc changes
         id: changes
