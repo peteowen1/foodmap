@@ -72,7 +72,7 @@ scrape_michelin <- function(city = "san-francisco",
         "Michelin live scrape found 0 listing URLs (likely a WAF/IP block).",
         "i" = "Falling back to committed snapshot: {nrow(snap)} venue{?s}."
       ))
-      return(snap)
+      return(mark_source_fallback(snap, "committed Michelin snapshot"))
     }
     cli::cli_abort("No restaurant URLs found on Michelin listing pages.")
   }
@@ -126,7 +126,7 @@ scrape_michelin <- function(city = "san-francisco",
         "Michelin returned listing URLs but every detail page failed (WAF).",
         "i" = "Falling back to committed snapshot: {nrow(snap)} venue{?s}."
       ))
-      return(snap)
+      return(mark_source_fallback(snap, "committed Michelin snapshot"))
     }
     cli::cli_abort("Could not extract any venues from the Michelin Guide.")
   }

@@ -118,20 +118,36 @@ scrape_all_sources <- function(city = "sydney", use_cache = FALSE,
   cli::cli_h1("Scraping {length(supported)} source{?s} for {city}")
   cli::cli_alert_info("Sources: {.val {supported}}")
 
+  # Per-source outcome, so a degraded run (a source that errored, came
+  # back empty, or quietly used a committed fallback) is reported in one
+  # summary instead of being scattered across per-source warnings.
+  status <- list()
   results <- purrr::map(supported, function(src) {
     cli::cli_rule()
     tryCatch({
       tbl <- scrape_restaurants(city = city, source = src,
                                 use_cache = use_cache,
                                 use_parsed_cache = use_parsed_cache)
+      fallback <- attr(tbl, "foodmap_fallback", exact = TRUE)
+      n <- if (is.null(tbl)) 0L else nrow(tbl)
+      status[[src]] <<- if (!is.null(fallback)) {
+        list(status = "fallback", detail = paste0(fallback, ", ", n, " rows"))
+      } else if (n == 0) {
+        list(status = "empty", detail = "0 rows")
+      } else {
+        list(status = "ok", detail = paste0(n, " rows"))
+      }
       tbl$source <- src
       tbl
     }, error = function(e) {
       cli::cli_warn("Source {.val {src}} failed: {conditionMessage(e)}")
+      status[[src]] <<- list(status = "failed", detail = conditionMessage(e))
       NULL
     })
   }) |>
     purrr::compact()
+
+  report_source_status(city, status)
 
   if (length(results) == 0) {
     cli::cli_abort("All sources failed for {.val {city}}.")
@@ -141,4 +157,58 @@ scrape_all_sources <- function(city = "sydney", use_cache = FALSE,
   cli::cli_h2("Combined results")
   cli::cli_alert_success("{nrow(combined)} venue{?s} from {length(results)} source{?s}")
   combined
+}
+
+
+#' Flag a scraper result as coming from a fallback rather than a live scrape
+#'
+#' [scrape_all_sources()] reads the attribute and lists the source as
+#' degraded in its end-of-run summary.
+#' @noRd
+mark_source_fallback <- function(tbl, what) {
+  attr(tbl, "foodmap_fallback") <- what
+  tbl
+}
+
+
+#' Summary lines for the sources that did not return a normal live scrape
+#'
+#' @param status Named list (by source) of `list(status, detail)`, where
+#'   status is one of "ok", "empty", "fallback", "failed".
+#' @return Character vector, one line per degraded source (empty if none).
+#' @noRd
+degraded_source_lines <- function(status) {
+  bad <- purrr::keep(status, function(s) s$status != "ok")
+  if (length(bad) == 0) return(character())
+  vapply(names(bad), function(src) {
+    detail <- gsub("[\r\n]+", " ", bad[[src]]$detail)
+    paste0(src, ": ", bad[[src]]$status, " (", detail, ")")
+  }, character(1), USE.NAMES = FALSE)
+}
+
+
+#' Print the degraded-source summary, and append it to a report file
+#'
+#' When the `FOODMAP_SOURCE_REPORT` environment variable names a file (the
+#' weekly rebuild-maps workflow sets it), the summary is appended there as
+#' Markdown so the workflow can put it in the refresh PR body.
+#' @noRd
+report_source_status <- function(city, status) {
+  lines <- degraded_source_lines(status)
+  cli::cli_h2("Source summary for {city}")
+  if (length(lines) == 0) {
+    cli::cli_alert_success("All {length(status)} source{?s} returned live data.")
+  } else {
+    cli::cli_alert_warning(
+      "{length(lines)} of {length(status)} source{?s} degraded (failed, empty or fallback):"
+    )
+    for (l in lines) cli::cli_bullets(c("!" = "{l}"))
+  }
+
+  report <- Sys.getenv("FOODMAP_SOURCE_REPORT", "")
+  if (nzchar(report) && length(lines) > 0) {
+    cat(paste0("- **", city, "** ", lines, "\n"), sep = "",
+        file = report, append = TRUE)
+  }
+  invisible(lines)
 }
