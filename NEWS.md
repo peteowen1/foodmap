@@ -1,3 +1,11 @@
+# foodmap 0.3.1
+
+## Data
+
+* `inst/extdata/geocodes_seed.csv` gains coordinates for 36 Honolulu venues
+  from the Hale ʻAina awards, which list no addresses and so never geocode
+  through Nominatim. Honolulu now maps 169 of 169 venues (floor 150).
+
 # foodmap 0.3.0
 
 ## New features
