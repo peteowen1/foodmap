@@ -67,21 +67,31 @@ gt_parse_item <- function(item, city) {
       rvest::html_text2()
   }
 
-  # Metadata buttons: expected [price, cuisine, address] in that order
+  # Metadata buttons, read by CONTENT not position. The page used to carry
+  # [price, cuisine, address]; by 2026-10 it dropped the price button, so a
+  # positional read put the address in the cuisine slot ("46-52 Meagher St"
+  # as a cuisine filter on the Sydney map) and left address NA. Call-to-action
+  # buttons ("book a table online") can also appear and are dropped.
   buttons <- rvest::html_elements(
     item, "div.wp-block-button.is-style-tertiary a.wp-block-button__link"
   ) |>
-    rvest::html_text2()
+    rvest::html_text2() |>
+    stringr::str_squish()
+  buttons <- buttons[nzchar(buttons) &
+                       !grepl("^(book|reserve|sign up)", buttons, ignore.case = TRUE)]
 
-  if (length(buttons) != 3 && length(buttons) > 0) {
+  is_price  <- grepl("^\\$+$", buttons)
+  price_str <- buttons[is_price][1]
+  rest      <- buttons[!is_price]
+  if (length(rest) == 1 && grepl("[0-9]", rest)) rest <- c(NA_character_, rest)
+  cuisine   <- rest[1]
+  address   <- if (length(rest) >= 2) rest[length(rest)] else NA_character_
+
+  if (length(rest) != 2 && length(buttons) > 0) {
     cli::cli_warn(
-      "Expected 3 metadata buttons for {.val {name %||% 'unknown'}}, got {length(buttons)}"
+      "Expected cuisine + address buttons for {.val {name %||% 'unknown'}}, got {length(rest)}: {.val {rest}}"
     )
   }
-
-  price_str <- buttons[1] %||% NA_character_
-  cuisine   <- buttons[2] %||% NA_character_
-  address   <- buttons[3] %||% NA_character_
 
   # Convert dollar signs to integer (1-5)
   price_range <- if (!is.na(price_str) && grepl("^\\$+$", price_str)) {
