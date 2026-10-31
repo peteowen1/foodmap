@@ -37,6 +37,20 @@ test_that("gt_parse_item extracts data from fixture", {
   expect_true(grepl("Matt Moran", result$description))
 })
 
+test_that("gt_parse_item reads the 2026 layout with no price button", {
+  # The page dropped the price button; a positional read put the address in
+  # cuisine. A trailing call-to-action button must not become the address.
+  item <- rvest::read_html(fixture_path("gourmet_traveller_item_2026.html")) |>
+    rvest::html_element("div.wp-block-xwp-listicle-item")
+  result <- gt_parse_item(item, "sydney")
+
+  expect_equal(result$name, "Ester")
+  expect_equal(result$cuisine, "Japanese")
+  expect_equal(result$address, "46-52 Meagher St, Chippendale")
+  expect_equal(result$suburb, "Chippendale")
+  expect_true(is.na(result$price_range))
+})
+
 # --- Urban List ---
 test_that("urban_list_parse_content extracts restaurants from fixture", {
   content <- rvest::read_html(fixture_path("urban_list_content.html")) |>

@@ -1,3 +1,12 @@
+# foodmap 0.3.2
+
+## Bug fixes
+
+* `scrape_gourmet_traveller()` reads each metadata button by its content rather
+  than its position. The Sydney page dropped its price button, so addresses
+  were landing in `cuisine` (47 street and suburb names in the Sydney map's
+  cuisine filter) and `address` was NA.
+
 # foodmap 0.3.1
 
 ## Data
